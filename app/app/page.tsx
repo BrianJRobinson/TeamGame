@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAccount, useConnect, useDisconnect, useContractWrite, usePrepareContractWrite } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useContractWrite, usePrepareContractWrite, useContractRead } from 'wagmi';
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { Twitter, Facebook, Instagram, Github } from 'lucide-react';
+import battleSceneImage from '/public/images/battlescene2.jpg';
+
+// Import images
+import leftCharacter from '/public/images/left-character.png';
+import rightCharacter from '/public/images/right-character.png';
+import playerIcon from '/public/images/teamgame-player.png';
+import teamIcon from '/public/images/teamgame-team.png';
+import RobotsBattle from '/public/images/2robots-battle.jpg';
+import battleImage from '/public/images/BattleArena.jpg';
 
 // Replace this with your actual deployed contract address
 const CONTRACT_ADDRESS = "0x1234567890123456789012345678901234567890";
@@ -52,7 +61,35 @@ const CONTRACT_ABI = [
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
-  }
+  },
+  {
+    "inputs": [],
+    "name": "teamCost",
+    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalTeamCount",
+    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalPlayerCount",
+    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "currentPoolId",
+    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  }  
 ];
 
 export default function AppPage() {
@@ -88,6 +125,31 @@ export default function AppPage() {
     functionName: 'JoinTeam',
     args: [parseInt(teamIdToJoin)],
     enabled: isConnected && teamIdToJoin.trim() !== '',
+  });
+
+  // Read contract data
+  const { data: teamCost, isError: isTeamCostError } = useContractRead({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'teamCost',
+  });
+
+  const { data: totalTeamCount, isError: isTotalTeamCountError } = useContractRead({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'totalTeamCount',
+  });
+
+  const { data: totalPlayerCount, isError: isTotalPlayerCountError } = useContractRead({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'totalPlayerCount',
+  });
+
+  const { data: currentPoolId, isError: isCurrentPoolIdError } = useContractRead({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'currentPoolId',
   });
 
   const { write: createPlayer, isLoading: isCreatingPlayer } = useContractWrite(createPlayerConfig);
@@ -199,17 +261,17 @@ export default function AppPage() {
 
   return (
     <div className="min-h-screen bg-cover bg-center bg-no-repeat relative overflow-hidden flex flex-col"
-         style={{backgroundImage: "url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2071&q=80')"}}>
+         style={{backgroundImage: `url(${battleSceneImage.src})`, margin: `-70px`, zIndex: -100}}>
       <div className="absolute inset-0 bg-gradient-to-b from-blue-900/70 to-purple-900/70"></div>
       
       {/* Character Images */}
       <div className="relative z-10 flex justify-between items-end pt-20 px-4 sm:px-6 lg:px-8">
-        <Image src="/left-character.png" alt="Left Character" width={200} height={300} className="mb-[-50px]" />
-        <Image src="/right-character.png" alt="Right Character" width={200} height={300} className="mb-[-50px]" />
+        <Image src={leftCharacter} alt="Left Character" width={200} height={300} className="mb-[-50px] ml-20" />
+        <Image src={rightCharacter} alt="Right Character" width={200} height={300} className="mb-[-50px] mr-20" />
       </div>
 
       {/* Hero Container */}
-      <div className="relative z-20 bg-gray-900/80 mt-[-50px] py-12 px-4 sm:px-6 lg:px-8 rounded-t-3xl">
+      <div className="relative z-20 bg-gray-900/80 mt-[-50px] py-12 px-4 mx-20 sm:px-6 lg:px-8 rounded-t-3xl ">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-4xl font-bold text-white">Welcome to MEGA WAR</h1>
@@ -220,14 +282,56 @@ export default function AppPage() {
             )}
           </div>
           <p className="text-xl text-gray-200 mb-12">Create your player, form a team, and battle for glory!</p>
-
+           {/* Info Cards */}
+           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 gap-6 lg:gap-18 mb-12 lg:max-w-48">
+            <Card className="bg-white/10 backdrop-blur-lg text-white">
+              <CardHeader>
+                <CardTitle>Team Cost</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">
+                  {isTeamCostError ? 'Error' : (teamCost ? `${teamCost.toString()} WETH` : 'Loading...')}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-white/10 backdrop-blur-lg text-white">
+              <CardHeader>
+                <CardTitle>Total Teams</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">
+                  {isTotalTeamCountError ? 'Error' : (totalTeamCount ? totalTeamCount.toString() : 'Loading...')}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-white/10 backdrop-blur-lg text-white">
+              <CardHeader>
+                <CardTitle>Total Players</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">
+                  {isTotalPlayerCountError ? 'Error' : (totalPlayerCount ? totalPlayerCount.toString() : 'Loading...')}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-white/10 backdrop-blur-lg text-white">
+              <CardHeader>
+                <CardTitle>Current Pool ID</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">
+                  {isCurrentPoolIdError ? 'Error' : (currentPoolId ? currentPoolId.toString() : 'Loading...')}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
           <div className="grid md:grid-cols-2 gap-8">
             {/* Left side: Action Cards */}
             <div className="space-y-6">
               <Card className="bg-white/10 backdrop-blur-lg text-white overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105 animate-slide-up">
                 <div className="flex">
-                  <div className="w-1/5 bg-blue-500 flex items-center justify-center">
-                    <Image src="/player-icon.png" alt="Create Player" width={80} height={80} />
+                  <div className="w-1/4 flex items-center justify-start rounded-lg">
+                    <Image src={playerIcon} alt="Create Player" width={100} height={100} className="rounded-l-lg h-full"/>
                   </div>
                   <div className="w-4/5">
                     <CardHeader>
@@ -254,8 +358,8 @@ export default function AppPage() {
 
               <Card className="bg-white/10 backdrop-blur-lg text-white overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105 animate-slide-up animation-delay-200">
                 <div className="flex">
-                  <div className="w-1/5 bg-green-500 flex items-center justify-center">
-                    <Image src="/team-icon.png" alt="Create Team" width={80} height={80} />
+                  <div className="w-1/4 flex items-center justify-start rounded-lg">
+                    <Image src={teamIcon} alt="Form Team" width={100} height={100}  className="rounded-l-lg h-full"/>
                   </div>
                   <div className="w-4/5">
                     <CardHeader>
@@ -282,8 +386,8 @@ export default function AppPage() {
 
               <Card className="bg-white/10 backdrop-blur-lg text-white overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105 animate-slide-up animation-delay-400">
                 <div className="flex">
-                  <div className="w-1/5 bg-yellow-500 flex items-center justify-center">
-                    <Image src="/join-team-icon.png" alt="Join Team" width={80} height={80} />
+                  <div className="w-1/4 flex items-center justify-start rounded-lg">
+                    <Image src={RobotsBattle} alt="Compete" width={100} height={100} className="rounded-l-lg h-full" />
                   </div>
                   <div className="w-4/5">
                     <CardHeader>

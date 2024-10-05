@@ -3,12 +3,20 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { Twitter, Facebook, Instagram, Github } from 'lucide-react';
 
+// Import images
+import leftCharacter from '/public/images/left-character.png';
+import rightCharacter from '/public/images/right-character.png';
+import playerIcon from '/public/images/teamgame-player.png';
+import teamIcon from '/public/images/teamgame-team.png';
+import RobotsBattle from '/public/images/2robots-battle.jpg';
+import battleImage from '/public/images/BattleArena.jpg';
+
 export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
       <div className="bg-cover bg-center h-screen flex items-center justify-center relative"
-           style={{backgroundImage: "url('https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1470&q=80')"}}>
+           style={{backgroundImage: `url(${battleImage.src})`, zIndex: `-100`, marginTop:-100}}>
         <div className="absolute inset-0 bg-black opacity-50"></div>
         <div className="z-10 text-center text-white">
           <h1 className="text-5xl font-bold mb-6">Welcome to the Mega War Blockchain Game</h1>
@@ -24,13 +32,13 @@ export default function Home() {
 
       {/* How to Play Section */}
       <section id="learn-more" className="py-16 bg-gray-100 dark:bg-gray-800">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 md:max-w-80 lg:max-w-none">
           <h2 className="text-3xl font-semibold mb-8 text-center text-blue-700 dark:text-blue-300">How to Play</h2>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-1 lg:grid-cols-3 xl:grid-cols-3 gap-8">
             <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105 animate-slide-up">
               <div className="flex">
-                <div className="w-1/5 bg-blue-500 flex items-center justify-center">
-                  <Image src="/create-player-icon.png" alt="Create Player" width={80} height={80} />
+                <div className="w-1/4 flex items-center justify-start rounded-lg">
+                  <Image src={playerIcon} alt="Create Player" width={80} height={100} className="rounded-l-lg h-full"/>
                 </div>
                 <div className="w-4/5 p-6">
                   <h3 className="text-xl font-semibold mb-2 text-blue-600 dark:text-blue-400">1. Create a Player</h3>
@@ -40,8 +48,8 @@ export default function Home() {
             </div>
             <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105 animate-slide-up animation-delay-200">
               <div className="flex">
-                <div className="w-1/5 bg-green-500 flex items-center justify-center">
-                  <Image src="/form-team-icon.png" alt="Form Team" width={80} height={80} />
+                <div className="w-1/4 flex items-center justify-start rounded-lg">
+                  <Image src={teamIcon} alt="Form Team" width={80} height={80}  className="rounded-l-lg h-full"/>
                 </div>
                 <div className="w-4/5 p-6">
                   <h3 className="text-xl font-semibold mb-2 text-blue-600 dark:text-blue-400">2. Form a Team</h3>
@@ -49,10 +57,10 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105 animate-slide-up animation-delay-400">
+            <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105 animate-slide-up animation-delay-200">
               <div className="flex">
-                <div className="w-1/5 bg-yellow-500 flex items-center justify-center">
-                  <Image src="/compete-icon.png" alt="Compete" width={80} height={80} />
+                <div className="w-1/4 flex items-center justify-start rounded-lg">
+                  <Image src={RobotsBattle} alt="Compete" width={80} height={80} className="rounded-l-lg h-full" />
                 </div>
                 <div className="w-4/5 p-6">
                   <h3 className="text-xl font-semibold mb-2 text-blue-600 dark:text-blue-400">3. Compete and Win</h3>
