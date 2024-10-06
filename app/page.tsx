@@ -1,11 +1,10 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { Twitter, Facebook, Instagram, Github } from 'lucide-react';
+import { X, Facebook, Instagram, Github } from 'lucide-react';
 
 // Import images
-import leftCharacter from '/public/images/left-character.png';
-import rightCharacter from '/public/images/right-character.png';
+
 import playerIcon from '/public/images/teamgame-player.png';
 import teamIcon from '/public/images/teamgame-team.png';
 import RobotsBattle from '/public/images/2robots-battle.jpg';
@@ -16,15 +15,17 @@ export default function Home() {
     <div className="min-h-screen">
       {/* Hero Section */}
       <div className="bg-cover bg-center h-screen flex items-center justify-center relative"
-           style={{backgroundImage: `url(${battleImage.src})`, zIndex: `-100`, marginTop:-100}}>
+           style={{backgroundImage: `url(${battleImage.src})`, marginTop:-100}}>
         <div className="absolute inset-0 bg-black opacity-50"></div>
         <div className="z-10 text-center text-white">
           <h1 className="text-5xl font-bold mb-6">Welcome to the Mega War Blockchain Game</h1>
           <p className="text-xl mb-8">Create your player, form a team, and compete in this exciting blockchain-based game!</p>
-          <Button asChild size="lg" className="mr-4">
-            <Link href="/app">Enter the Game</Link>
-          </Button>
-          <Button asChild variant="outline" size="lg">
+          <Link href="/app" passHref>
+            <Button size="lg" className="mr-4">
+              Enter the Game
+            </Button>
+          </Link>
+          <Button variant="outline" size="lg">
             <a href="#learn-more">Learn More</a>
           </Button>
         </div>
@@ -102,7 +103,7 @@ export default function Home() {
             </div>
             <div className="flex space-x-4">
               <a href="#" className="hover:text-blue-400 transition-colors">
-                <Twitter size={24} />
+                <X size={24} />
               </a>
               <a href="#" className="hover:text-blue-600 transition-colors">
                 <Facebook size={24} />

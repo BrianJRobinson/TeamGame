@@ -1,7 +1,13 @@
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useAccount, useConnect, useDisconnect, useContractWrite, usePrepareContractWrite, useContractRead } from 'wagmi';
+import { useState, useEffect, useCallback } from 'react';
+import { useAccount, useConnect, useDisconnect, useContractWrite, usePrepareContractWrite, useContractRead, useWaitForTransaction } from 'wagmi';
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +16,9 @@ import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { Twitter, Facebook, Instagram, Github } from 'lucide-react';
 import battleSceneImage from '/public/images/battlescene2.jpg';
+import InfoCard from '@/components/my-ui/InfoCard'; // Add this import
+import InputCard from '@/components/my-ui/InputCard';
+import { ethers } from 'ethers';
 
 // Import images
 import leftCharacter from '/public/images/left-character.png';
@@ -20,7 +29,9 @@ import RobotsBattle from '/public/images/2robots-battle.jpg';
 import battleImage from '/public/images/BattleArena.jpg';
 
 // Replace this with your actual deployed contract address
-const CONTRACT_ADDRESS = "0x1234567890123456789012345678901234567890";
+const CONTRACT_ADDRESS = "0xF2aA715A7E7Dfd8222fa8fDe7499c5385EA3c4D6";
+const MAX_CHARS = 30;
+const MIN_CHARS = 3;
 
 const CONTRACT_ABI = [
   {
@@ -96,20 +107,95 @@ export default function AppPage() {
   const [playerName, setPlayerName] = useState('');
   const [teamName, setTeamName] = useState('');
   const [teamIdToJoin, setTeamIdToJoin] = useState('');
+  const [animate, setAnimate] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);
   const { address, isConnected } = useAccount();
   const { connect } = useConnect({
     connector: new InjectedConnector(),
   });
   const { disconnect } = useDisconnect();
   const { toast } = useToast();
+  const [currentPoolId, setCurrentPoolId] = useState<number | null>(null);
+  const [currentPoolIdError, setCurrentPoolIdError] = useState<string | null>(null);
+  const [teamCost, setTeamCost] = useState<string | null>(null);
+  const [teamCostError, setTeamCostError] = useState<string | null>(null);
+  const [totalTeamCount, setTotalTeamCount] = useState<string | null>(null);
+  const [totalTeamCountError, setTotalTeamCountError] = useState<string | null>(null);
+  const [totalPlayerCount, setTotalPlayerCount] = useState<string | null>(null);
+  const [totalPlayerCountError, setTotalPlayerCountError] = useState<string | null>(null);
 
-  const { config: createPlayerConfig, error: createPlayerError } = usePrepareContractWrite({
+  
+  const { config: createPlayerConfig, error: prepareError } = usePrepareContractWrite({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     functionName: 'CreatePlayer',
     args: [playerName],
-    enabled: isConnected && playerName.trim() !== '',
+    enabled: !isCreatingPlayer && isConnected && (playerName.trim().length >= MIN_CHARS && playerName.trim().length <= MAX_CHARS),
   });
+
+  const { write: createPlayer, data: createPlayerData, error: writeError } = useContractWrite(createPlayerConfig);
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed, isError: isTransactionFailed, error: transactionError } = useWaitForTransaction({
+    hash: createPlayerData?.hash,
+  });
+
+  const handleCreatePlayer = useCallback(async () => {
+    if (!createPlayer) {
+      console.error("Create player function is not available");
+      toast({
+        title: "Error",
+        description: "Unable to create player. Create player function is not available.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsCreatingPlayer(true);
+    try {
+      console.log("Attempting to create player with name:", playerName);
+      await createPlayer();
+    } catch (error) {
+      console.error("Error creating player:", error);
+      toast({
+        title: "Error",
+        description: `Failed to create player: ${error instanceof Error ? error.message : "Unknown error"}`,
+        variant: "destructive",
+      });
+      setIsCreatingPlayer(false);
+    }
+  }, [createPlayer, toast, playerName]);
+
+  useEffect(() => {
+    if (isConfirmed) {
+      toast({
+        title: "Success",
+        description: "Player created successfully!",
+      });
+      setPlayerName('');
+      setIsCreatingPlayer(false);
+    } else if (isTransactionFailed) {
+      const errorMessage = transactionError?.message || "The transaction was unsuccessful.";
+      let userFriendlyMessage = errorMessage;
+
+      // Check for specific error messages and provide more user-friendly explanations
+      if (errorMessage.includes("execution reverted")) {
+        if (errorMessage.includes("Player already exists")) {
+          userFriendlyMessage = "This wallet already has a player. You cannot create another one.";
+        } else if (errorMessage.includes("Invalid name")) {
+          userFriendlyMessage = "The player name is invalid. Please choose a different name.";
+        }
+        // Add more specific error checks as needed
+      }
+
+      toast({
+        title: "Error",
+        description: `Failed to create player: ${userFriendlyMessage}`,
+        variant: "destructive",
+      });
+      setIsCreatingPlayer(false);
+    }
+  }, [isConfirmed, isTransactionFailed, transactionError, toast]);
 
   const { config: createTeamConfig, error: createTeamError } = usePrepareContractWrite({
     address: CONTRACT_ADDRESS,
@@ -119,6 +205,9 @@ export default function AppPage() {
     enabled: isConnected && teamName.trim() !== '',
   });
 
+  const { write: createTeam, isLoading: isCreatingTeam } = useContractWrite(createTeamConfig);
+
+
   const { config: joinTeamConfig, error: joinTeamError } = usePrepareContractWrite({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
@@ -127,60 +216,8 @@ export default function AppPage() {
     enabled: isConnected && teamIdToJoin.trim() !== '',
   });
 
-  // Read contract data
-  const { data: teamCost, isError: isTeamCostError } = useContractRead({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    functionName: 'teamCost',
-  });
 
-  const { data: totalTeamCount, isError: isTotalTeamCountError } = useContractRead({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    functionName: 'totalTeamCount',
-  });
-
-  const { data: totalPlayerCount, isError: isTotalPlayerCountError } = useContractRead({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    functionName: 'totalPlayerCount',
-  });
-
-  const { data: currentPoolId, isError: isCurrentPoolIdError } = useContractRead({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    functionName: 'currentPoolId',
-  });
-
-  const { write: createPlayer, isLoading: isCreatingPlayer } = useContractWrite(createPlayerConfig);
-  const { write: createTeam, isLoading: isCreatingTeam } = useContractWrite(createTeamConfig);
   const { write: joinTeam, isLoading: isJoiningTeam } = useContractWrite(joinTeamConfig);
-
-  const handleCreatePlayer = async () => {
-    if (!createPlayer) {
-      toast({
-        title: "Error",
-        description: "Unable to create player. Please try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      await createPlayer();
-      toast({
-        title: "Success",
-        description: "Player created successfully!",
-      });
-      setPlayerName('');
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create player. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleCreateTeam = async () => {
     if (!createTeam) {
@@ -236,12 +273,8 @@ export default function AppPage() {
 
   // Display error messages if contract interactions fail
   useEffect(() => {
-    if (createPlayerError) {
-      toast({
-        title: "Error",
-        description: `Failed to prepare create player transaction: ${createPlayerError.message}`,
-        variant: "destructive",
-      });
+    if (prepareError) {
+      console.error("Prepare error:", prepareError);
     }
     if (createTeamError) {
       toast({
@@ -257,22 +290,145 @@ export default function AppPage() {
         variant: "destructive",
       });
     }
-  }, [createPlayerError, createTeamError, joinTeamError, toast]);
+  }, [prepareError, createTeamError, joinTeamError, toast]);
+
+  useEffect(() => {
+    setAnimate(true);
+    setIsClient(true);
+  }, []);
+
+  //#region Fetch Contract Data
+
+  useEffect(() => {
+    const fetchCurrentPoolId = async () => {
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+          const result = await contract.currentPoolId();
+          console.log("Current Pool ID from ethers:", result);
+          setCurrentPoolId(result.toNumber());
+        } catch (error) {
+          console.error("Error fetching currentPoolId with ethers:", error);
+          if (error instanceof Error) {
+            setCurrentPoolIdError(error.message);
+          } else {
+            setCurrentPoolIdError("An unknown error occurred");
+          }
+        }
+      }
+    };
+
+    if (isClient) {
+      fetchCurrentPoolId();
+    }
+  }, [isClient]);
+
+  useEffect(() => {
+    const fetchTeamCost = async () => {
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+          const result = await contract.teamCost();
+          setTeamCost(ethers.utils.formatEther(result));
+        } catch (error) {
+          console.error("Error fetching teamCost:", error);
+          if (error instanceof Error) {
+            setTeamCostError(error.message);
+          } else {
+            setTeamCostError("An unknown error occurred");
+          }
+        }
+      }
+    };
+
+    if (isClient) {
+      fetchTeamCost();
+    }
+  }, [isClient]);
+
+  useEffect(() => {
+    const fetchTotalTeamCount = async () => {
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+          const result = await contract.totalTeamCount();
+          setTotalTeamCount(result.toString());
+        } catch (error) {
+          console.error("Error fetching totalTeamCount:", error);
+          if (error instanceof Error) {
+            setTotalTeamCountError(error.message);
+          } else {
+            setTotalTeamCountError("An unknown error occurred");
+          }
+        }
+      }
+    };
+
+    if (isClient) {
+      fetchTotalTeamCount();
+    }
+  }, [isClient]);
+
+  useEffect(() => {
+    const fetchTotalPlayerCount = async () => {
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+          const result = await contract.totalPlayerCount();
+          setTotalPlayerCount(result.toString());
+        } catch (error) {
+          console.error("Error fetching totalPlayerCount:", error);
+          if (error instanceof Error) {
+            setTotalPlayerCountError(error.message);
+          } else {
+            setTotalPlayerCountError("An unknown error occurred");
+          }
+        }
+      }
+    };
+
+    if (isClient) {
+      fetchTotalPlayerCount();
+    }
+  }, [isClient]);
+  //#endregion
+  // Render placeholder content during SSR
+  if (!isClient) {
+    return <div>Loading...</div>; // Or any loading indicator you prefer
+  }
 
   return (
     <div className="min-h-screen bg-cover bg-center bg-no-repeat relative overflow-hidden flex flex-col"
-         style={{backgroundImage: `url(${battleSceneImage.src})`, margin: `-70px`, zIndex: -100}}>
+         style={{backgroundImage: `url(${battleSceneImage.src})`, margin: `-70px`}}>
       <div className="absolute inset-0 bg-gradient-to-b from-blue-900/70 to-purple-900/70"></div>
       
       {/* Character Images */}
-      <div className="relative z-10 flex justify-between items-end pt-20 px-4 sm:px-6 lg:px-8 mx-20">
-        <Image src={leftCharacter} alt="Left Character" width={200} height={300} className="mb-[-50px] transition-all translate-x-1 origin-left duration-500 ease-in-out hover:scale-105 translate-x-12"/>
-        <Image src={rightCharacter} alt="Right Character" width={200} height={300} className="mb-[-50px]" />
+      <div className="relative z-10 flex justify-between items-end pt-40 px-4 sm:px-6 lg:px-8 mx-auto max-w-8xl w-full lg:w-4/5 xl:w-3/4">
+        <Image 
+          src={leftCharacter} 
+          alt="Left Character" 
+          width={200} 
+          height={300} 
+          className={`mb-[-50px] transition-all duration-1000 ease-in-out hover:scale-105 ${
+            animate ? 'animate-slide-in-left' : 'opacity-0'
+          }`}
+        />
+        <Image 
+          src={rightCharacter} 
+          alt="Left Character" 
+          width={200} 
+          height={300} 
+          className="mb-[-50px] transition-all duration-1000 ease-in-out hover:scale-105 animate-slide-in-right"
+        />
       </div>
 
       {/* Hero Container */}
-      <div className="relative z-20 bg-gray-900/80 mt-[-50px] py-12 px-4 mx-20 sm:px-6 lg:px-8 rounded-t-3xl ">
-        <div className="max-w-7xl mx-auto">
+      <div className="relative z-20 bg-gray-900/80 mt-[-50px] py-12 px-4 sm:px-6 lg:px-8 rounded-t-3xl mx-auto max-w-8xl w-full lg:w-4/5 xl:w-3/4">
+        <div className="max-w-screen-2xl mx-auto">
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-4xl font-bold text-white">Welcome to MEGA WAR</h1>
             {isConnected ? (
@@ -283,134 +439,75 @@ export default function AppPage() {
           </div>
           <p className="text-xl text-gray-200 mb-12">Create your player, form a team, and battle for glory!</p>
            {/* Info Cards */}
-           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 gap-6 lg:gap-18 mb-12 lg:max-w-48">
-            <Card className="bg-white/10 backdrop-blur-lg text-white">
-              <CardHeader>
-                <CardTitle>Team Cost</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">
-                  {isTeamCostError ? 'Error' : (teamCost ? `${teamCost.toString()} WETH` : 'Loading...')}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/10 backdrop-blur-lg text-white">
-              <CardHeader>
-                <CardTitle>Total Teams</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">
-                  {isTotalTeamCountError ? 'Error' : (totalTeamCount ? totalTeamCount.toString() : 'Loading...')}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/10 backdrop-blur-lg text-white">
-              <CardHeader>
-                <CardTitle>Total Players</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">
-                  {isTotalPlayerCountError ? 'Error' : (totalPlayerCount ? totalPlayerCount.toString() : 'Loading...')}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-white/10 backdrop-blur-lg text-white">
-              <CardHeader>
-                <CardTitle>Current Pool ID</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">
-                  {isCurrentPoolIdError ? 'Error' : (currentPoolId ? currentPoolId.toString() : 'Loading...')}
-                </p>
-              </CardContent>
-            </Card>
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <InfoCard
+                title="Team Cost"
+                content={teamCostError ? `Error: ${teamCostError}` : (teamCost ? `${teamCost} WETH` : 'Loading...')}
+              />
+              <InfoCard
+                title="Total Teams"
+                content={totalTeamCountError ? `Error: ${totalTeamCountError}` : (totalTeamCount ? totalTeamCount : 'Loading...')}
+              />
+              <InfoCard
+                title="Total Players"
+                content={totalPlayerCountError ? `Error: ${totalPlayerCountError}` : (totalPlayerCount ? totalPlayerCount : 'Loading...')}
+              />
+              <InfoCard
+                title="Current Pool ID"
+                content={currentPoolIdError 
+                  ? `Error: ${currentPoolIdError}` 
+                  : (currentPoolId !== null ? currentPoolId.toString() : 'Loading...')}
+              />
           </div>
           <div className="grid md:grid-cols-2 gap-8">
             {/* Left side: Action Cards */}
             <div className="space-y-6">
-              <Card className="bg-white/10 backdrop-blur-lg text-white overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105 animate-slide-up">
-                <div className="flex">
-                  <div className="w-1/4 flex items-center justify-start rounded-lg">
-                    <Image src={playerIcon} alt="Create Player" width={100} height={100} className="rounded-l-lg h-full"/>
-                  </div>
-                  <div className="w-4/5">
-                    <CardHeader>
-                      <CardTitle>Step 1: Create a Player</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Input
-                        placeholder="Enter player name"
-                        value={playerName}
-                        onChange={(e) => setPlayerName(e.target.value)}
-                        className="mb-4"
-                        disabled={!isConnected}
-                      />
-                      <Button 
-                        onClick={handleCreatePlayer} 
-                        disabled={!isConnected || playerName.trim() === '' || isCreatingPlayer}
-                      >
-                        {isCreatingPlayer ? 'Creating...' : 'Create Player'}
-                      </Button>
-                    </CardContent>
-                  </div>
-                </div>
-              </Card>
+              <InputCard
+                title="1: Create a Player"
+                imageSrc={playerIcon.src}
+                imageAlt="Create Player"
+                inputPlaceholder={`Enter player name (Max ${MAX_CHARS})`}
+                inputValue={playerName}
+                onInputChange={(e) => setPlayerName(e.target.value)}
+                buttonText={isCreatingPlayer || isConfirming ? "Creating..." : "Create Player"}
+                onButtonClick={handleCreatePlayer}
+                isLoading={isCreatingPlayer || isConfirming}
+                isDisabled={!isConnected || isCreatingPlayer || isConfirming}
+                maxChars={MAX_CHARS}
+                minChars={MIN_CHARS}
+              />
 
-              <Card className="bg-white/10 backdrop-blur-lg text-white overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105 animate-slide-up animation-delay-200">
-                <div className="flex">
-                  <div className="w-1/4 flex items-center justify-start rounded-lg">
-                    <Image src={teamIcon} alt="Form Team" width={100} height={100}  className="rounded-l-lg h-full"/>
-                  </div>
-                  <div className="w-4/5">
-                    <CardHeader>
-                      <CardTitle>Step 2: Create a Team</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Input
-                        placeholder="Enter team name"
-                        value={teamName}
-                        onChange={(e) => setTeamName(e.target.value)}
-                        className="mb-4"
-                        disabled={!isConnected}
-                      />
-                      <Button 
-                        onClick={handleCreateTeam} 
-                        disabled={!isConnected || teamName.trim() === '' || isCreatingTeam}
-                      >
-                        {isCreatingTeam ? 'Creating...' : 'Create Team'}
-                      </Button>
-                    </CardContent>
-                  </div>
-                </div>
-              </Card>
+              <InputCard
+                title="2: Create a Team"
+                imageSrc={teamIcon.src}
+                imageAlt="Form Team"
+                inputPlaceholder={`Enter team name (Max ${MAX_CHARS})`}
+                inputValue={teamName}
+                onInputChange={(e) => setTeamName(e.target.value)}
+                buttonText="Create Team"
+                onButtonClick={handleCreateTeam}
+                isLoading={isCreatingTeam}
+                isDisabled={!isConnected}
+                animationDelay="animation-delay-200"
+                maxChars={MAX_CHARS}
+                minChars={MIN_CHARS}
+              />
 
-              <Card className="bg-white/10 backdrop-blur-lg text-white overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105 animate-slide-up animation-delay-400">
-                <div className="flex">
-                  <div className="w-1/4 flex items-center justify-start rounded-lg">
-                    <Image src={RobotsBattle} alt="Compete" width={100} height={100} className="rounded-l-lg h-full" />
-                  </div>
-                  <div className="w-4/5">
-                    <CardHeader>
-                      <CardTitle>Step 3: Join a Team</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Input
-                        placeholder="Enter team ID to join"
-                        value={teamIdToJoin}
-                        onChange={(e) => setTeamIdToJoin(e.target.value)}
-                        className="mb-4"
-                        disabled={!isConnected}
-                      />
-                      <Button 
-                        onClick={handleJoinTeam} 
-                        disabled={!isConnected || teamIdToJoin.trim() === '' || isJoiningTeam}
-                      >
-                        {isJoiningTeam ? 'Joining...' : 'Join Team'}
-                      </Button>
-                    </CardContent>
-                  </div>
-                </div>
-              </Card>
+              <InputCard
+                title="3: Join a Team"
+                imageSrc={RobotsBattle.src}
+                imageAlt="Compete"
+                inputPlaceholder="Enter team ID to join"
+                inputValue={teamIdToJoin}
+                onInputChange={(e) => setTeamIdToJoin(e.target.value)}
+                buttonText="Join Team"
+                onButtonClick={handleJoinTeam}
+                isLoading={isJoiningTeam}
+                isDisabled={!isConnected}
+                animationDelay="animation-delay-400"
+                maxChars={MAX_CHARS}
+                minChars={MIN_CHARS}
+              />
             </div>
 
             {/* Right side: Team List */}

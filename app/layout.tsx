@@ -4,7 +4,7 @@ import { Inter } from 'next/font/google';
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import Header from '@/components/Header';
-import { Providers } from './providers';
+import { WagmiProvider } from './providers';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -21,7 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`min-h-screen bg-background ${inter.className}`}>
-        <Providers>
+        <WagmiProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -32,7 +32,7 @@ export default function RootLayout({
             {children}
             <Toaster />
           </ThemeProvider>
-        </Providers>
+        </WagmiProvider>
       </body>
     </html>
   );

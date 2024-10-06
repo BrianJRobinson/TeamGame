@@ -11,16 +11,16 @@ export default function Header() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <header className="backdrop-blur-sm">
-      <nav className="container sticky mx-auto px-4 py-4 flex justify-between items-center backdrop-blur-lg opacity-75">
+    <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-sm bg-white/30 dark:bg-black/30">
+      <nav className="container mx-auto px-4 py-4 flex justify-between items-center">
         <Link href="/" className="text-2xl font-bold text-white-600 dark:text-white-600">
           Mega War Game
         </Link>
         <div className="space-x-4">
-          <Link href="/" className={`${pathname === '/' ? 'text-red-400 dark:text-red-400' : 'text-white-600 dark:text-white-300'} hover:text-red-800 dark:hover:text-red-200`}>
+          <Link href="/" className={`${pathname === '/' ? 'text-white-800 dark:text-white-800' : 'text-white-400 dark:text-white-400'} hover:text-white-800 dark:hover:text-white-200`}>
             Home
           </Link>
-          <Link href="/app" className={`${pathname === '/app' ? 'text-red-800 dark:text-white-400' : 'text-white-600 dark:text-white-600'} hover:text-red-800 dark:hover:text-red-200`}>
+          <Link href="/app" className={`${pathname === '/app' ? 'text-white-800 dark:text-white-800' : 'text-white-400 dark:text-white-400'} hover:text-white-800 dark:hover:text-white-800`}>
             App
           </Link>
         </div>

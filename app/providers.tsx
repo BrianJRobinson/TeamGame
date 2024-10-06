@@ -2,21 +2,21 @@
 
 import { WagmiConfig, createConfig, configureChains } from 'wagmi';
 import { publicProvider } from 'wagmi/providers/public';
-import { baseGoerli } from 'wagmi/chains';
-import { MetaMaskConnector } from 'wagmi/connectors/metaMask';
+import { mainnet, sepolia } from 'wagmi/chains'; // Import the chains you need
+import { InjectedConnector } from 'wagmi/connectors/injected';
 
 const { chains, publicClient, webSocketPublicClient } = configureChains(
-  [baseGoerli],
+  [mainnet, sepolia], // Add or remove chains as needed
   [publicProvider()]
 );
 
 const config = createConfig({
   autoConnect: true,
-  connectors: [new MetaMaskConnector({ chains })],
+  connectors: [new InjectedConnector({ chains })],
   publicClient,
   webSocketPublicClient,
 });
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function WagmiProvider({ children }: { children: React.ReactNode }) {
   return <WagmiConfig config={config}>{children}</WagmiConfig>;
 }
