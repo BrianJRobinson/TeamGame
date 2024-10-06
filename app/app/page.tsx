@@ -265,9 +265,9 @@ export default function AppPage() {
       <div className="absolute inset-0 bg-gradient-to-b from-blue-900/70 to-purple-900/70"></div>
       
       {/* Character Images */}
-      <div className="relative z-10 flex justify-between items-end pt-20 px-4 sm:px-6 lg:px-8">
-        <Image src={leftCharacter} alt="Left Character" width={200} height={300} className="mb-[-50px] ml-20" />
-        <Image src={rightCharacter} alt="Right Character" width={200} height={300} className="mb-[-50px] mr-20" />
+      <div className="relative z-10 flex justify-between items-end pt-20 px-4 sm:px-6 lg:px-8 mx-20">
+        <Image src={leftCharacter} alt="Left Character" width={200} height={300} className="mb-[-50px] transition-all translate-x-1 origin-left duration-500 ease-in-out hover:scale-105 translate-x-12"/>
+        <Image src={rightCharacter} alt="Right Character" width={200} height={300} className="mb-[-50px]" />
       </div>
 
       {/* Hero Container */}
