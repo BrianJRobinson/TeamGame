@@ -7,7 +7,7 @@ declare global {
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useConnect, useDisconnect, useContractWrite, usePrepareContractWrite, useContractRead, useWaitForTransaction } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useContractWrite, usePrepareContractWrite, useContractRead } from 'wagmi';
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,8 @@ import battleSceneImage from '/public/images/battlescene2.jpg';
 import InfoCard from '@/components/my-ui/InfoCard'; // Add this import
 import InputCard from '@/components/my-ui/InputCard';
 import { ethers } from 'ethers';
+import CONTRACT_ABI from '@/app/ContractABI';
+import { Skeleton } from "@/components/ui/skeleton"; // Make sure you have this component
 
 // Import images
 import leftCharacter from '/public/images/left-character.png';
@@ -33,84 +35,61 @@ const CONTRACT_ADDRESS = "0xF2aA715A7E7Dfd8222fa8fDe7499c5385EA3c4D6";
 const MAX_CHARS = 30;
 const MIN_CHARS = 3;
 
-const CONTRACT_ABI = [
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "name",
-        "type": "string"
-      }
-    ],
-    "name": "CreatePlayer",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "name",
-        "type": "string"
-      }
-    ],
-    "name": "CreateTeam",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "teamId",
-        "type": "uint256"
-      }
-    ],
-    "name": "JoinTeam",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "teamCost",
-    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "totalTeamCount",
-    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "totalPlayerCount",
-    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "currentPoolId",
-    "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
-    "stateMutability": "view",
-    "type": "function"
-  }  
-];
+function usePlayerData() {
+  const { address, isConnected } = useAccount();
+  const [playerData, setPlayerData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
+
+  const fetchPlayerData = useCallback(async () => {
+    if (!isConnected || !address) return;
+
+    setIsLoading(true);
+    setIsError(false);
+
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+
+      const result = await contract.GetPlayerByAddress(address);
+      console.log('GetPlayerByAddress result:', result);  // For debugging
+
+      setPlayerData(result);
+    } catch (error) {
+      console.error('Error fetching player data:', error);
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [address, isConnected]);
+
+  useEffect(() => {
+    fetchPlayerData();
+  }, [fetchPlayerData]);
+
+  return { playerData, isError, isLoading, isConnected, refetch: fetchPlayerData };
+}
 
 export default function AppPage() {
+  const { playerData, isError, isLoading, isConnected, refetch } = usePlayerData();
+  const [currentPlayerName, setCurrentPlayerName] = useState('');
+
+  useEffect(() => {
+    if (playerData && !isError && !isLoading && isConnected) {
+      // Assuming the player data structure includes a 'name' field
+      setCurrentPlayerName(playerData.name || 'No name');
+    } else {
+      setCurrentPlayerName('');
+    }
+  }, [playerData, isError, isLoading, isConnected]);
+
   const [playerName, setPlayerName] = useState('');
   const [teamName, setTeamName] = useState('');
   const [teamIdToJoin, setTeamIdToJoin] = useState('');
   const [animate, setAnimate] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);
-  const { address, isConnected } = useAccount();
+  const { address } = useAccount();
   const { connect } = useConnect({
     connector: new InjectedConnector(),
   });
@@ -124,89 +103,24 @@ export default function AppPage() {
   const [totalTeamCountError, setTotalTeamCountError] = useState<string | null>(null);
   const [totalPlayerCount, setTotalPlayerCount] = useState<string | null>(null);
   const [totalPlayerCountError, setTotalPlayerCountError] = useState<string | null>(null);
+  const [pendingTransactions, setPendingTransactions] = useState<Record<string, boolean>>({});
+  const [lastTransactionHash, setLastTransactionHash] = useState<string | null>(null);
 
-  
-  const { config: createPlayerConfig, error: prepareError } = usePrepareContractWrite({
+  const { config: createPlayerConfig, error: createPlayerError } = usePrepareContractWrite({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     functionName: 'CreatePlayer',
     args: [playerName],
-    enabled: !isCreatingPlayer && isConnected && (playerName.trim().length >= MIN_CHARS && playerName.trim().length <= MAX_CHARS),
+    enabled: isConnected && (playerName.trim().length >= MIN_CHARS && playerName.trim().length <= MAX_CHARS),
   });
 
-  const { write: createPlayer, data: createPlayerData, error: writeError } = useContractWrite(createPlayerConfig);
-
-  const { isLoading: isConfirming, isSuccess: isConfirmed, isError: isTransactionFailed, error: transactionError } = useWaitForTransaction({
-    hash: createPlayerData?.hash,
+  const { write: createPlayer, data: createPlayerData, isLoading: isCreatingPlayerTransaction } = useContractWrite({
+    ...createPlayerConfig,
+    onSuccess(data) {
+      setPendingTransactions(prev => ({ ...prev, [data.hash]: true }));
+      checkTransaction(data.hash, 'player');
+    },
   });
-
-  const handleCreatePlayer = useCallback(async () => {
-    if (!createPlayer) {
-      console.error("Create player function is not available");
-      toast({
-        title: "Error",
-        description: "Unable to create player. Create player function is not available.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsCreatingPlayer(true);
-    try {
-      console.log("Attempting to create player with name:", playerName);
-      await createPlayer();
-    } catch (error) {
-      console.error("Error creating player:", error);
-      toast({
-        title: "Error",
-        description: `Failed to create player: ${error instanceof Error ? error.message : "Unknown error"}`,
-        variant: "destructive",
-      });
-      setIsCreatingPlayer(false);
-    }
-  }, [createPlayer, toast, playerName]);
-
-  useEffect(() => {
-    if (isConfirmed) {
-      toast({
-        title: "Success",
-        description: "Player created successfully!",
-      });
-      setPlayerName('');
-      setIsCreatingPlayer(false);
-    } else if (isTransactionFailed) {
-      const errorMessage = transactionError?.message || "The transaction was unsuccessful.";
-      let userFriendlyMessage = errorMessage;
-
-      // Check for specific error messages and provide more user-friendly explanations
-      if (errorMessage.includes("execution reverted")) {
-        if (errorMessage.includes("Player already exists")) {
-          userFriendlyMessage = "This wallet already has a player. You cannot create another one.";
-        } else if (errorMessage.includes("Invalid name")) {
-          userFriendlyMessage = "The player name is invalid. Please choose a different name.";
-        }
-        // Add more specific error checks as needed
-      }
-
-      toast({
-        title: "Error",
-        description: `Failed to create player: ${userFriendlyMessage}`,
-        variant: "destructive",
-      });
-      setIsCreatingPlayer(false);
-    }
-  }, [isConfirmed, isTransactionFailed, transactionError, toast]);
-
-  const { config: createTeamConfig, error: createTeamError } = usePrepareContractWrite({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    functionName: 'CreateTeam',
-    args: [teamName],
-    enabled: isConnected && teamName.trim() !== '',
-  });
-
-  const { write: createTeam, isLoading: isCreatingTeam } = useContractWrite(createTeamConfig);
-
 
   const { config: joinTeamConfig, error: joinTeamError } = usePrepareContractWrite({
     address: CONTRACT_ADDRESS,
@@ -216,65 +130,111 @@ export default function AppPage() {
     enabled: isConnected && teamIdToJoin.trim() !== '',
   });
 
+  const { write: joinTeam, data: joinTeamData, isLoading: isJoiningTeam } = useContractWrite({
+    ...joinTeamConfig,
+    onSuccess(data) {
+      setPendingTransactions(prev => ({ ...prev, [data.hash]: true }));
+      checkTransaction(data.hash, 'join');
+    },
+  });
 
-  const { write: joinTeam, isLoading: isJoiningTeam } = useContractWrite(joinTeamConfig);
-
-  const handleCreateTeam = async () => {
-    if (!createTeam) {
+  const checkTransaction = useCallback(async (hash: string, type: 'player' | 'team' | 'join') => {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    try {
+      const tx = await provider.getTransaction(hash);
+      if (tx) {
+        const receipt = await tx.wait();
+        if (receipt.status === 1) {
+          toast({
+            title: "Success",
+            description: `${type === 'player' ? 'Player created' : type === 'team' ? 'Team created' : 'Joined team'} successfully!`,
+          });
+          if (type === 'player') {
+            setPlayerName('');
+          } else if (type === 'team') {
+            setTeamName('');
+          } else {
+            setTeamIdToJoin('');
+          }
+        } else {
+          throw new Error("Transaction failed");
+        }
+      }
+    } catch (error) {
+      console.error(`Error checking ${type} transaction:`, error);
       toast({
         title: "Error",
-        description: "Unable to create team. Please try again.",
+        description: `Failed to ${type === 'player' ? 'create player' : type === 'team' ? 'create team' : 'join team'}. Please check the transaction on the blockchain.`,
         variant: "destructive",
       });
+    } finally {
+      setPendingTransactions(prev => ({ ...prev, [hash]: false }));
+    }
+  }, [toast, setPlayerName, setTeamName, setTeamIdToJoin]);
+
+  const handleCreatePlayer = useCallback(async () => {
+    if (!createPlayer) {
+      console.error("Create player function is not available");
       return;
     }
-    
+    setIsCreatingPlayer(true);
+    try {
+      await createPlayer();
+    } catch (error) {
+      console.error("Error creating player:", error);
+      setIsCreatingPlayer(false);
+    }
+  }, [createPlayer]);
+
+  const { config: createTeamConfig, error: createTeamError } = usePrepareContractWrite({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'CreateTeam',
+    args: [teamName],
+    enabled: isConnected && (teamName.trim().length >= MIN_CHARS && teamName.trim().length <= MAX_CHARS),
+  });
+
+  const { write: createTeam, data: createTeamData, isLoading: isCreatingTeam } = useContractWrite({
+    ...createTeamConfig,
+    onSuccess(data) {
+      setPendingTransactions(prev => ({ ...prev, [data.hash]: true }));
+      checkTransaction(data.hash, 'team');
+    },
+  });
+
+  const handleCreateTeam = useCallback(async () => {
+    if (!createTeam) {
+      console.error("Create team function is not available");
+      return;
+    }
     try {
       await createTeam();
-      toast({
-        title: "Success",
-        description: "Team created successfully!",
-      });
-      setTeamName('');
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create team. Please try again.",
-        variant: "destructive",
-      });
+      console.error("Error creating team:", error);
     }
-  };
+  }, [createTeam]);
 
-  const handleJoinTeam = async () => {
+  const handleJoinTeam = useCallback(async () => {
     if (!joinTeam) {
-      toast({
-        title: "Error",
-        description: "Unable to join team. Please try again.",
-        variant: "destructive",
-      });
+      console.error("Join team function is not available");
       return;
     }
-    
     try {
       await joinTeam();
-      toast({
-        title: "Success",
-        description: "Joined team successfully!",
-      });
-      setTeamIdToJoin('');
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to join team. Please try again.",
-        variant: "destructive",
-      });
+      console.error("Error joining team:", error);
     }
-  };
+  }, [joinTeam]);
 
   // Display error messages if contract interactions fail
   useEffect(() => {
-    if (prepareError) {
-      console.error("Prepare error:", prepareError);
+    if (createPlayerError) {
+      console.error("Error preparing create player transaction:", createPlayerError);
+      toast({
+        title: "Error",
+        description: `Failed to prepare create player transaction: ${createPlayerError.message}`,
+        variant: "destructive",
+      });
     }
     if (createTeamError) {
       toast({
@@ -290,7 +250,7 @@ export default function AppPage() {
         variant: "destructive",
       });
     }
-  }, [prepareError, createTeamError, joinTeamError, toast]);
+  }, [createPlayerError, createTeamError, joinTeamError, toast]);
 
   useEffect(() => {
     setAnimate(true);
@@ -430,7 +390,24 @@ export default function AppPage() {
       <div className="relative z-20 bg-gray-900/80 mt-[-50px] py-12 px-4 sm:px-6 lg:px-8 rounded-t-3xl mx-auto max-w-8xl w-full lg:w-4/5 xl:w-3/4">
         <div className="max-w-screen-2xl mx-auto">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-4xl font-bold text-white">Welcome to MEGA WAR</h1>
+            <div>
+              <h1 className="text-4xl font-bold text-white">Welcome to MEGA WAR</h1>
+              <div className="text-xl text-gray-200 mt-2">
+                Current Player: {
+                  !isConnected ? (
+                    <span className="text-yellow-400">Not connected</span>
+                  ) : isLoading ? (
+                    <Skeleton className="h-6 w-32 inline-block" />
+                  ) : isError ? (
+                    <span className="text-red-400">Error loading player data</span>
+                  ) : currentPlayerName ? (
+                    currentPlayerName
+                  ) : (
+                    <span className="text-yellow-400">No player found</span>
+                  )
+                }
+              </div>
+            </div>
             {isConnected ? (
               <Button onClick={() => disconnect()} variant="outline">Disconnect Wallet</Button>
             ) : (
@@ -469,10 +446,10 @@ export default function AppPage() {
                 inputPlaceholder={`Enter player name (Max ${MAX_CHARS})`}
                 inputValue={playerName}
                 onInputChange={(e) => setPlayerName(e.target.value)}
-                buttonText={isCreatingPlayer || isConfirming ? "Creating..." : "Create Player"}
+                buttonText={isCreatingPlayer || isCreatingPlayerTransaction ? "Creating..." : "Create Player"}
                 onButtonClick={handleCreatePlayer}
-                isLoading={isCreatingPlayer || isConfirming}
-                isDisabled={!isConnected || isCreatingPlayer || isConfirming}
+                isLoading={isCreatingPlayer || isCreatingPlayerTransaction}
+                isDisabled={!isConnected || isCreatingPlayer || isCreatingPlayerTransaction}
                 maxChars={MAX_CHARS}
                 minChars={MIN_CHARS}
               />
@@ -484,10 +461,10 @@ export default function AppPage() {
                 inputPlaceholder={`Enter team name (Max ${MAX_CHARS})`}
                 inputValue={teamName}
                 onInputChange={(e) => setTeamName(e.target.value)}
-                buttonText="Create Team"
+                buttonText={isCreatingTeam || Object.values(pendingTransactions).some(Boolean) ? "Creating..." : "Create Team"}
                 onButtonClick={handleCreateTeam}
-                isLoading={isCreatingTeam}
-                isDisabled={!isConnected}
+                isLoading={isCreatingTeam || Object.values(pendingTransactions).some(Boolean)}
+                isDisabled={!isConnected || isCreatingTeam || Object.values(pendingTransactions).some(Boolean)}
                 animationDelay="animation-delay-200"
                 maxChars={MAX_CHARS}
                 minChars={MIN_CHARS}
@@ -500,13 +477,11 @@ export default function AppPage() {
                 inputPlaceholder="Enter team ID to join"
                 inputValue={teamIdToJoin}
                 onInputChange={(e) => setTeamIdToJoin(e.target.value)}
-                buttonText="Join Team"
+                buttonText={isJoiningTeam || Object.values(pendingTransactions).some(Boolean) ? "Joining..." : "Join Team"}
                 onButtonClick={handleJoinTeam}
-                isLoading={isJoiningTeam}
-                isDisabled={!isConnected}
+                isLoading={isJoiningTeam || Object.values(pendingTransactions).some(Boolean)}
+                isDisabled={!isConnected || isJoiningTeam || Object.values(pendingTransactions).some(Boolean)}
                 animationDelay="animation-delay-400"
-                maxChars={MAX_CHARS}
-                minChars={MIN_CHARS}
               />
             </div>
 
