@@ -1,12 +1,9 @@
-import './globals.css';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import Header from '@/components/Header';
 import { WagmiProvider } from './providers';
-
-const inter = Inter({ subsets: ['latin'] });
+import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Mega War Blockchain Game',
@@ -20,7 +17,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`min-h-screen bg-background ${inter.className}`}>
+      <head>
+      </head>
+      <body>
         <WagmiProvider>
           <ThemeProvider
             attribute="class"

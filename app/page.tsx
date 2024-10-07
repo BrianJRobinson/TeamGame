@@ -35,11 +35,11 @@ export default function Home() {
       <section id="learn-more" className="py-16 bg-gray-100 dark:bg-gray-800">
         <div className="container mx-auto px-4 md:max-w-80 lg:max-w-none">
           <h2 className="text-3xl font-semibold mb-8 text-center text-blue-700 dark:text-blue-300">How to Play</h2>
-          <div className="grid md:grid-cols-1 lg:grid-cols-3 xl:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-1 lg:grid-cols-3 xl:grid-cols-3 gap-14">
             <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105 animate-slide-up">
               <div className="flex">
                 <div className="w-1/4 flex items-center justify-start rounded-lg">
-                  <Image src={playerIcon} alt="Create Player" width={80} height={100} className="rounded-l-lg h-full"/>
+                  <Image src={playerIcon} alt="Create Player" width={140} height={100} className="rounded-l-lg h-full"/>
                 </div>
                 <div className="w-4/5 p-6">
                   <h3 className="text-xl font-semibold mb-2 text-blue-600 dark:text-blue-400">1. Create a Player</h3>
@@ -50,7 +50,7 @@ export default function Home() {
             <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105 animate-slide-up animation-delay-200">
               <div className="flex">
                 <div className="w-1/4 flex items-center justify-start rounded-lg">
-                  <Image src={teamIcon} alt="Form Team" width={80} height={80}  className="rounded-l-lg h-full"/>
+                  <Image src={teamIcon} alt="Form Team" width={140} height={80}  className="rounded-l-lg h-full"/>
                 </div>
                 <div className="w-4/5 p-6">
                   <h3 className="text-xl font-semibold mb-2 text-blue-600 dark:text-blue-400">2. Form a Team</h3>
@@ -61,7 +61,7 @@ export default function Home() {
             <div className="bg-white dark:bg-gray-700 rounded-lg shadow-md overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105 animate-slide-up animation-delay-200">
               <div className="flex">
                 <div className="w-1/4 flex items-center justify-start rounded-lg">
-                  <Image src={RobotsBattle} alt="Compete" width={80} height={80} className="rounded-l-lg h-full" />
+                  <Image src={RobotsBattle} alt="Compete" width={140} height={80} className="rounded-l-lg h-full" />
                 </div>
                 <div className="w-4/5 p-6">
                   <h3 className="text-xl font-semibold mb-2 text-blue-600 dark:text-blue-400">3. Compete and Win</h3>

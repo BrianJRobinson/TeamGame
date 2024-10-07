@@ -10,8 +10,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAccount, useConnect, useDisconnect, useContractWrite, usePrepareContractWrite, useContractRead } from 'wagmi';
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { Twitter, Facebook, Instagram, Github } from 'lucide-react';
@@ -19,23 +18,25 @@ import battleSceneImage from '/public/images/battlescene2.jpg';
 import InfoCard from '@/components/my-ui/InfoCard'; // Add this import
 import InputCard from '@/components/my-ui/InputCard';
 import { ethers } from 'ethers';
-import CONTRACT_ABI from '@/app/ContractABI';
+import { CONTRACT_ADDRESS, CONTRACT_ABI, ETH_ADDRESS, TOKEN_ADDRESS, ETH_ABI, TOKEN_ABI } from '@/app/Contract';
 import { Skeleton } from "@/components/ui/skeleton"; // Make sure you have this component
-
+//import { usePlayerData } from '@/app/utils/helpers';
+import { PlayerData } from '@/app/utils/types';
+import TeamList from '@/components/my-ui/tsxhelpers';
 // Import images
 import leftCharacter from '/public/images/left-character.png';
 import rightCharacter from '/public/images/right-character.png';
 import playerIcon from '/public/images/teamgame-player.png';
 import teamIcon from '/public/images/teamgame-team.png';
 import RobotsBattle from '/public/images/2robots-battle.jpg';
-import battleImage from '/public/images/BattleArena.jpg';
+import DogTag from '@/components/my-ui/DogTag';
+
 
 // Replace this with your actual deployed contract address
-const CONTRACT_ADDRESS = "0xF2aA715A7E7Dfd8222fa8fDe7499c5385EA3c4D6";
 const MAX_CHARS = 30;
 const MIN_CHARS = 3;
 
-function usePlayerData() {
+export function usePlayerData() {
   const { address, isConnected } = useAccount();
   const [playerData, setPlayerData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -77,7 +78,7 @@ export default function AppPage() {
   useEffect(() => {
     if (playerData && !isError && !isLoading && isConnected) {
       // Assuming the player data structure includes a 'name' field
-      setCurrentPlayerName(playerData.name || 'No name');
+      setCurrentPlayerName((playerData as PlayerData).name || 'No name');
     } else {
       setCurrentPlayerName('');
     }
@@ -104,6 +105,10 @@ export default function AppPage() {
   const [totalPlayerCount, setTotalPlayerCount] = useState<string | null>(null);
   const [totalPlayerCountError, setTotalPlayerCountError] = useState<string | null>(null);
   const [pendingTransactions, setPendingTransactions] = useState<Record<string, boolean>>({});
+  const [currentETHBalance, setCurrentETHBalance] = useState<string | null>(null);
+  const [currentETHBalanceError, setCurrentETHBalanceError] = useState<string | null>(null);
+  const [currentTokenBalance, setCurrentTokenBalance] = useState<string | null>(null);
+  const [currentTokenBalanceError, setCurrentTokenBalanceError] = useState<string | null>(null);
   const [lastTransactionHash, setLastTransactionHash] = useState<string | null>(null);
 
   const { config: createPlayerConfig, error: createPlayerError } = usePrepareContractWrite({
@@ -355,6 +360,59 @@ export default function AppPage() {
       fetchTotalPlayerCount();
     }
   }, [isClient]);
+
+  useEffect(() => {
+    const fetchETHBalance = async () => {
+      if (typeof window.ethereum !== 'undefined' && address) {
+        try {
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const contract = new ethers.Contract(ETH_ADDRESS, ETH_ABI, provider);
+          const balance = await provider.getBalance(address);
+          let newBal = Number(ethers.utils.formatEther(balance));
+          setCurrentETHBalance(newBal.toFixed(7));
+          setCurrentETHBalanceError(null);
+        } catch (error) {
+          console.error("Error fetching ETH Balance:", error);
+          if (error instanceof Error) {
+            setCurrentETHBalanceError(error.message);
+          } else {
+            setCurrentETHBalanceError("An unknown error occurred");
+          }
+        }
+      }
+    };
+
+    if (isClient && isConnected && address) {
+      fetchETHBalance();
+    }
+  }, [isClient, isConnected, address]);
+
+  useEffect(() => {
+    const fetchTokenBalance = async () => {
+      if (typeof window.ethereum !== 'undefined' && address) {
+        try {
+          console.log("Fetching token balance for address:", address);
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const contract = new ethers.Contract(TOKEN_ADDRESS, TOKEN_ABI, provider);
+          const result = await contract.balanceOf(address);
+          console.log("Token balance result:", result.toString());
+          setCurrentTokenBalance(ethers.utils.formatEther(result));
+        } catch (error) {
+          console.error("Error fetching Token Balance:", error);
+          if (error instanceof Error) {
+            setCurrentTokenBalanceError(error.message);
+          } else {
+            setCurrentTokenBalanceError("An unknown error occurred");
+          }
+        }
+      }
+    };
+
+    if (isClient && isConnected && address) {
+      fetchTokenBalance();
+    }
+  }, [isClient, isConnected, address, TOKEN_ADDRESS, TOKEN_ABI]);
+
   //#endregion
   // Render placeholder content during SSR
   if (!isClient) {
@@ -373,13 +431,11 @@ export default function AppPage() {
           alt="Left Character" 
           width={200} 
           height={300} 
-          className={`mb-[-50px] transition-all duration-1000 ease-in-out hover:scale-105 ${
-            animate ? 'animate-slide-in-left' : 'opacity-0'
-          }`}
+          className="mb-[-50px] transition-all duration-1000 ease-in-out hover:scale-105 animate-slide-in-left"
         />
         <Image 
           src={rightCharacter} 
-          alt="Left Character" 
+          alt="Right Character" 
           width={200} 
           height={300} 
           className="mb-[-50px] transition-all duration-1000 ease-in-out hover:scale-105 animate-slide-in-right"
@@ -392,21 +448,17 @@ export default function AppPage() {
           <div className="flex justify-between items-center mb-8">
             <div>
               <h1 className="text-4xl font-bold text-white">Welcome to MEGA WAR</h1>
-              <div className="text-xl text-gray-200 mt-2">
-                Current Player: {
-                  !isConnected ? (
-                    <span className="text-yellow-400">Not connected</span>
-                  ) : isLoading ? (
-                    <Skeleton className="h-6 w-32 inline-block" />
-                  ) : isError ? (
-                    <span className="text-red-400">Error loading player data</span>
-                  ) : currentPlayerName ? (
-                    currentPlayerName
-                  ) : (
-                    <span className="text-yellow-400">No player found</span>
-                  )
-                }
-              </div>
+              {!isLoading && isConnected && currentPlayerName && currentETHBalance && currentTokenBalance && !isError ? 
+              (<DogTag 
+                playerName={currentPlayerName} 
+                ethBalance={currentETHBalance} 
+                tokenBalance={currentTokenBalance} 
+              />): (
+                <DogTag 
+                playerName='Unknown' 
+                ethBalance='0.0' 
+                tokenBalance='0.0' 
+              />)}                                        
             </div>
             {isConnected ? (
               <Button onClick={() => disconnect()} variant="outline">Disconnect Wallet</Button>
@@ -443,13 +495,13 @@ export default function AppPage() {
                 title="1: Create a Player"
                 imageSrc={playerIcon.src}
                 imageAlt="Create Player"
-                inputPlaceholder={`Enter player name (Max ${MAX_CHARS})`}
+                inputPlaceholder={ playerData != null ? `Player already registered!` : `Enter player name (Max ${MAX_CHARS})`}
                 inputValue={playerName}
                 onInputChange={(e) => setPlayerName(e.target.value)}
                 buttonText={isCreatingPlayer || isCreatingPlayerTransaction ? "Creating..." : "Create Player"}
                 onButtonClick={handleCreatePlayer}
                 isLoading={isCreatingPlayer || isCreatingPlayerTransaction}
-                isDisabled={!isConnected || isCreatingPlayer || isCreatingPlayerTransaction}
+                isDisabled={!isConnected || isCreatingPlayer || isCreatingPlayerTransaction || playerData != null}
                 maxChars={MAX_CHARS}
                 minChars={MIN_CHARS}
               />
@@ -482,6 +534,8 @@ export default function AppPage() {
                 isLoading={isJoiningTeam || Object.values(pendingTransactions).some(Boolean)}
                 isDisabled={!isConnected || isJoiningTeam || Object.values(pendingTransactions).some(Boolean)}
                 animationDelay="animation-delay-400"
+                maxChars={MAX_CHARS}
+                minChars={MIN_CHARS}                
               />
             </div>
 
@@ -491,8 +545,7 @@ export default function AppPage() {
                 <CardTitle>Existing Teams</CardTitle>
               </CardHeader>
               <CardContent>
-                {/* Add team list here */}
-                <p>Team list will be displayed here.</p>
+                <TeamList />
               </CardContent>
             </Card>
           </div>

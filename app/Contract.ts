@@ -1,4 +1,40 @@
-const CONTRACT_ABI = [
+export const CONTRACT_ADDRESS = "0xF2aA715A7E7Dfd8222fa8fDe7499c5385EA3c4D6";
+export const ETH_ADDRESS = "0x0000000000000000000000000000000000000000";
+export const TOKEN_ADDRESS = "0xf0fd5781171b286e5F57E6174D849186F7536Ff4";
+
+export const ETH_ABI = [
+    {
+        "inputs": [],
+        "name": "balanceOf",
+        "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function"
+    }
+]
+
+export const TOKEN_ABI = [
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "balanceOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]
+
+export const CONTRACT_ABI = [
     {
       "inputs": [
         {
@@ -108,6 +144,57 @@ const CONTRACT_ABI = [
       "type": "function"
     },
     {
+        "inputs": [
+            {
+            "internalType": "uint256",
+            "name": "teamId",
+            "type": "uint256"
+            }
+        ],
+        "name": "GetTeamById",
+        "outputs": [
+            {
+            "components": [
+                {
+                "internalType": "uint256",
+                "name": "teamId",
+                "type": "uint256"
+                },
+                {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+                },
+                {
+                "internalType": "address",
+                "name": "captain",
+                "type": "address"
+                },
+                {
+                "internalType": "uint256[]",
+                "name": "players",
+                "type": "uint256[]"
+                },
+                {
+                "internalType": "uint16",
+                "name": "teamSize",
+                "type": "uint16"
+                },
+                {
+                "internalType": "uint16",
+                "name": "playerCount",
+                "type": "uint16"
+                }
+            ],
+            "internalType": "struct TeamGame.Team",
+            "name": "",
+            "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "type": "error",
         "name": "NameAlreadyInUse",
         "inputs": [{"internalType": "string", "name": "name", "type": "string"}]
@@ -188,5 +275,3 @@ const CONTRACT_ABI = [
         "inputs": []
       }    
   ];
-
-  export default CONTRACT_ABI;

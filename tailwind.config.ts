@@ -9,6 +9,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Orbitron', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'sans-serif'],
+        orbitron: ['Orbitron', 'sans-serif'],
+      },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic':
@@ -93,8 +97,8 @@ const config: Config = {
         'slide-in-left': 'slide-in-left 1s ease-out forwards',
         'slide-in-right': 'slide-in-right 1s ease-out backwards',
       },
-    },
+    }
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [],
 };
 export default config;

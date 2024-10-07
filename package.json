@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "build:css": "tailwindcss -i ./app/globals.css -o ./dist/output.css --watch"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
