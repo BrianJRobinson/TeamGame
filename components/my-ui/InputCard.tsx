@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 
 interface InputCardProps {
+  cardNumber: string;
   title: string;
   imageSrc: string;
   imageAlt: string;
@@ -21,6 +22,7 @@ interface InputCardProps {
 }
 
 const InputCard: React.FC<InputCardProps> = ({
+  cardNumber,
   title,
   imageSrc,
   imageAlt,
@@ -49,7 +51,12 @@ const InputCard: React.FC<InputCardProps> = ({
         </div>
         <div className="w-4/5">
           <CardHeader>
-            <CardTitle>{title}</CardTitle>
+            <div className="flex items-center space-x-4">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/10 text-muted-white">
+            <span className="text-sm font-bold">{cardNumber}</span>
+          </div>
+          <CardTitle>{title}</CardTitle>
+            </div>
           </CardHeader>
           <CardContent>
             <Input

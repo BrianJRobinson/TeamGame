@@ -110,6 +110,33 @@ export default function AppPage() {
   const [currentTokenBalance, setCurrentTokenBalance] = useState<string | null>(null);
   const [currentTokenBalanceError, setCurrentTokenBalanceError] = useState<string | null>(null);
   const [lastTransactionHash, setLastTransactionHash] = useState<string | null>(null);
+  const [scrollY, setScrollY] = useState(0);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+
+    // Set isLoaded to true after a short delay
+    const timer = setTimeout(() => setIsLoaded(true), 100);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timer);
+    };
+  }, []);
+
+  const getTranslateX = (isLeft: boolean) => {
+    if (!isLoaded) return isLeft ? '-100%' : '100%';
+    
+    const direction = isLeft ? -1 : 1;
+    const maxScroll = 500; // Adjust this value to control how quickly the characters move off-screen
+    const translateX = Math.min(scrollY / maxScroll, 1) * 100 * direction;
+    return `${translateX}%`;
+  };
 
   const { config: createPlayerConfig, error: createPlayerError } = usePrepareContractWrite({
     address: CONTRACT_ADDRESS,
@@ -420,26 +447,37 @@ export default function AppPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cover bg-center bg-no-repeat relative overflow-hidden flex flex-col"
+    <div className="min-h-screen bg-cover bg-center bg-no-repeat relative overflow-hidden flex flex-col pt-[20vh]"
          style={{backgroundImage: `url(${battleSceneImage.src})`, margin: `-70px`}}>
       <div className="absolute inset-0 bg-gradient-to-b from-blue-900/70 to-purple-900/70"></div>
       
       {/* Character Images */}
       <div className="relative z-10 flex justify-between items-end pt-40 px-4 sm:px-6 lg:px-8 mx-auto max-w-8xl w-full lg:w-4/5 xl:w-3/4">
-        <Image 
-          src={leftCharacter} 
-          alt="Left Character" 
-          width={200} 
-          height={300} 
-          className="mb-[-50px] transition-all duration-1000 ease-in-out hover:scale-105 animate-slide-in-left"
-        />
-        <Image 
-          src={rightCharacter} 
-          alt="Right Character" 
-          width={200} 
-          height={300} 
-          className="mb-[-50px] transition-all duration-1000 ease-in-out hover:scale-105 animate-slide-in-right"
-        />
+        <div 
+          style={{ transform: `translateX(${getTranslateX(true)})` }}
+          className="absolute left-0 transition-transform duration-1000 ease-in-out"
+        >
+          <Image 
+            src={leftCharacter} 
+            alt="Left Character" 
+            width={200} 
+            height={300} 
+            className="mb-[-50px] transition-all duration-1000 ease-in-out hover:scale-105"
+          />
+        </div>
+        
+        <div 
+          style={{ transform: `translateX(${getTranslateX(false)})` }}
+          className="absolute right-0 transition-transform duration-1000 ease-in-out"
+        >
+          <Image 
+            src={rightCharacter} 
+            alt="Right Character" 
+            width={200} 
+            height={300} 
+            className="mb-[-50px] transition-all duration-1000 ease-in-out hover:scale-105"
+          />
+        </div>
       </div>
 
       {/* Hero Container */}
@@ -492,7 +530,8 @@ export default function AppPage() {
             {/* Left side: Action Cards */}
             <div className="space-y-6">
               <InputCard
-                title="1: Create a Player"
+                cardNumber="1"
+                title="Create a Player"
                 imageSrc={playerIcon.src}
                 imageAlt="Create Player"
                 inputPlaceholder={ playerData != null ? `Player already registered!` : `Enter player name (Max ${MAX_CHARS})`}
@@ -507,7 +546,8 @@ export default function AppPage() {
               />
 
               <InputCard
-                title="2: Create a Team"
+                cardNumber="2"
+                title="Create a Team"
                 imageSrc={teamIcon.src}
                 imageAlt="Form Team"
                 inputPlaceholder={`Enter team name (Max ${MAX_CHARS})`}
@@ -523,7 +563,8 @@ export default function AppPage() {
               />
 
               <InputCard
-                title="3: Join a Team"
+                cardNumber="3"
+                title="Join a Team"
                 imageSrc={RobotsBattle.src}
                 imageAlt="Compete"
                 inputPlaceholder="Enter team ID to join"

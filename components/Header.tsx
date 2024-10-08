@@ -17,10 +17,16 @@ export default function Header() {
           Mega War Game
         </Link>
         <div className="space-x-4">
-          <Link href="/" className={`${pathname === '/' ? 'text-white-800 dark:text-white-800 font-bold' : 'text-white-400 dark:text-white-400 font-normal'} hover:text-white-800 dark:hover:text-white-200`}>
+          <Link href="/" className={`${pathname === '/' ? 
+            'text-white-800 dark:text-white-800 font-black text-muted-foreground hover:text-primary transition-transform duration-200 hover:scale-140'  
+            : 'text-white-400 dark:text-white-400 font-normal text-muted-foreground hover:text-primary transition-transform duration-200 hover:scale-140'} 
+            hover:text-white-800 dark:hover:text-white-200`}>
             Home
           </Link>
-          <Link href="/app" className={`${pathname === '/app' ? 'text-white-800 dark:text-white-800 font-bold' : 'text-white-400 dark:text-white-400 font-normal'} hover:text-white-800 dark:hover:text-white-800`}>
+          <Link href="/app" className={`${pathname === '/app' ? 
+            'text-white-800 dark:text-white-800 font-black text-muted-foreground hover:text-primary'  
+            : 'text-white-400 dark:text-white-400 font-normal text-muted-foreground hover:text-primary'} 
+            hover:text-white-800 dark:hover:text-white-800`}>
             App
           </Link>
         </div>

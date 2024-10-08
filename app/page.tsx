@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { X, Facebook, Instagram, Github } from 'lucide-react';
+import { motion, useScroll, useTransform } from "framer-motion";
 
 // Import images
 
@@ -21,11 +22,11 @@ export default function Home() {
           <h1 className="text-5xl font-bold mb-6">Welcome to the Mega War Blockchain Game</h1>
           <p className="text-xl mb-8">Create your player, form a team, and compete in this exciting blockchain-based game!</p>
           <Link href="/app" passHref>
-            <Button size="lg" className="mr-4">
+            <Button size="lg" className="mr-4 bg-blue-500 hover:bg-blue-600 text-black">
               Enter the Game
             </Button>
           </Link>
-          <Button variant="outline" size="lg">
+          <Button variant="outline" size="lg" className="mr-4 bg-slate-900 hover:bg-slate-950 text-white">
             <a href="#learn-more">Learn More</a>
           </Button>
         </div>
