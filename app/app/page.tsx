@@ -31,6 +31,18 @@ import teamIcon from '/public/images/teamgame-team.png';
 import RobotsBattle from '/public/images/2robots-battle.jpg';
 import DogTag from '@/components/my-ui/DogTag';
 import { BASE_CHAIN_ID } from '@/app/utils/helpers';
+import {
+  checkTransaction,
+  handleCreatePlayer,
+  handleCreateTeam,
+  handleJoinTeam,
+  fetchCurrentPoolId,
+  fetchTeamCost,
+  fetchTotalTeamCount,
+  fetchTotalPlayerCount,
+  fetchETHBalance,
+  fetchTokenBalance
+} from '@/app/utils/chainfunctions';
 
 // Replace this with your actual deployed contract address
 const MAX_CHARS = 30;
@@ -173,7 +185,23 @@ export default function AppPage() {
     ...createPlayerConfig,
     onSuccess(data) {
       setPendingTransactions(prev => ({ ...prev, [data.hash]: true }));
-      checkTransaction(data.hash, 'player');
+      checkTransaction(data.hash, 'player', toast, setPlayerName, setTeamName, setTeamIdToJoin, setPendingTransactions);
+    },
+  });
+
+  const { config: createTeamConfig, error: createTeamError } = usePrepareContractWrite({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'CreateTeam',
+    args: [teamName],
+    enabled: isConnected && (teamName.trim().length >= MIN_CHARS && teamName.trim().length <= MAX_CHARS),
+  });
+
+  const { write: createTeam, data: createTeamData, isLoading: isCreatingTeam } = useContractWrite({
+    ...createTeamConfig,
+    onSuccess(data) {
+      setPendingTransactions(prev => ({ ...prev, [data.hash]: true }));
+      //checkTransaction(data.hash, 'team');
     },
   });
 
@@ -189,97 +217,57 @@ export default function AppPage() {
     ...joinTeamConfig,
     onSuccess(data) {
       setPendingTransactions(prev => ({ ...prev, [data.hash]: true }));
-      checkTransaction(data.hash, 'join');
+      checkTransaction(data.hash, 'join', toast, setPlayerName, setTeamName, setTeamIdToJoin, setPendingTransactions);
     },
   });
 
-  const checkTransaction = useCallback(async (hash: string, type: 'player' | 'team' | 'join') => {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    try {
-      const tx = await provider.getTransaction(hash);
-      if (tx) {
-        const receipt = await tx.wait();
-        if (receipt.status === 1) {
-          toast({
-            title: "Success",
-            description: `${type === 'player' ? 'Player created' : type === 'team' ? 'Team created' : 'Joined team'} successfully!`,
-          });
-          if (type === 'player') {
-            setPlayerName('');
-          } else if (type === 'team') {
-            setTeamName('');
-          } else {
-            setTeamIdToJoin('');
-          }
-        } else {
-          throw new Error("Transaction failed");
-        }
-      }
-    } catch (error) {
-      console.error(`Error checking ${type} transaction:`, error);
-      toast({
-        title: "Error",
-        description: `Failed to ${type === 'player' ? 'create player' : type === 'team' ? 'create team' : 'join team'}. Please check the transaction on the blockchain.`,
-        variant: "destructive",
-      });
-    } finally {
-      setPendingTransactions(prev => ({ ...prev, [hash]: false }));
-    }
-  }, [toast, setPlayerName, setTeamName, setTeamIdToJoin]);
-
-  const handleCreatePlayer = useCallback(async () => {
-    if (!createPlayer) {
-      console.error("Create player function is not available");
-      return;
-    }
-    setIsCreatingPlayer(true);
-    try {
-      await createPlayer();
-    } catch (error) {
-      console.error("Error creating player:", error);
-      setIsCreatingPlayer(false);
-    }
+  const handleCreatePlayerWrapper = useCallback(() => {
+    handleCreatePlayer(createPlayer, setIsCreatingPlayer);
   }, [createPlayer]);
 
-  const { config: createTeamConfig, error: createTeamError } = usePrepareContractWrite({
-    address: CONTRACT_ADDRESS,
-    abi: CONTRACT_ABI,
-    functionName: 'CreateTeam',
-    args: [teamName],
-    enabled: isConnected && (teamName.trim().length >= MIN_CHARS && teamName.trim().length <= MAX_CHARS),
-  });
+  const handleCreateTeamWrapper = useCallback(() => {
+    handleCreateTeam(createTeam);
+  }, [createTeam, handleCreateTeam]);
 
-  const { write: createTeam, data: createTeamData, isLoading: isCreatingTeam } = useContractWrite({
-    ...createTeamConfig,
-    onSuccess(data) {
-      setPendingTransactions(prev => ({ ...prev, [data.hash]: true }));
-      checkTransaction(data.hash, 'team');
-    },
-  });
+  const handleJoinTeamWrapper = useCallback(() => {
+    handleJoinTeam(joinTeam);
+  }, [joinTeam, handleJoinTeam]);
 
-  const handleCreateTeam = useCallback(async () => {
-    if (!createTeam) {
-      console.error("Create team function is not available");
-      return;
+  useEffect(() => {
+    if (isClient && isCorrectChain) {
+      fetchCurrentPoolId(setCurrentPoolId, setCurrentPoolIdError, isCorrectChain);
     }
-    try {
-      await createTeam();
-    } catch (error) {
-      console.error("Error creating team:", error);
-    }
-  }, [createTeam]);
+  }, [isClient]);
 
-  const handleJoinTeam = useCallback(async () => {
-    if (!joinTeam) {
-      console.error("Join team function is not available");
-      return;
+  useEffect(() => {
+    if (isClient && isCorrectChain) {
+      fetchTeamCost(setTeamCost, setTeamCostError, isCorrectChain);
     }
-    try {
-      await joinTeam();
-    } catch (error) {
-      console.error("Error joining team:", error);
+  }, [isClient]);
+
+  useEffect(() => {
+    if (isClient && isCorrectChain) {
+      fetchTotalTeamCount(setTotalTeamCount, setTotalTeamCountError, isCorrectChain);
     }
-  }, [joinTeam]);
+  }, [isClient]);
+
+  useEffect(() => {
+    if (isClient && isCorrectChain) {
+      fetchTotalPlayerCount(setTotalPlayerCount, setTotalPlayerCountError, isCorrectChain);
+    }
+  }, [isClient]);
+
+  useEffect(() => {
+    if (isClient && isConnected && address) {
+      fetchETHBalance(address, setCurrentETHBalance, setCurrentETHBalanceError, isCorrectChain);
+    }
+  }, [isClient, isConnected, address, isCorrectChain]);
+
+  useEffect(() => {
+    if (isClient && isConnected && address) {
+      fetchTokenBalance(address, setCurrentTokenBalance, setCurrentTokenBalanceError, isCorrectChain);
+    }
+  }, [isClient, isConnected, address]);
 
   // Display error messages if contract interactions fail
   useEffect(() => {
@@ -312,158 +300,6 @@ export default function AppPage() {
     setIsClient(true);
   }, []);
 
-  //#region Fetch Contract Data
-
-  useEffect(() => {
-    const fetchCurrentPoolId = async () => {
-      if (typeof window.ethereum !== 'undefined') {
-        try {
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
-          const result = await contract.currentPoolId();
-          console.log("Current Pool ID from ethers:", result);
-          setCurrentPoolId(result.toNumber());
-        } catch (error) {
-          console.error("Error fetching currentPoolId with ethers:", error);
-          if (error instanceof Error) {
-            setCurrentPoolIdError(error.message);
-          } else {
-            setCurrentPoolIdError("An unknown error occurred");
-          }
-        }
-      }
-    };
-
-    if (isClient) {
-      fetchCurrentPoolId();
-    }
-  }, [isClient]);
-
-  useEffect(() => {
-    const fetchTeamCost = async () => {
-      if (typeof window.ethereum !== 'undefined') {
-        try {
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
-          const result = await contract.teamCost();
-          setTeamCost(ethers.utils.formatEther(result));
-        } catch (error) {
-          console.error("Error fetching teamCost:", error);
-          if (error instanceof Error) {
-            setTeamCostError(error.message);
-          } else {
-            setTeamCostError("An unknown error occurred");
-          }
-        }
-      }
-    };
-
-    if (isClient) {
-      fetchTeamCost();
-    }
-  }, [isClient]);
-
-  useEffect(() => {
-    const fetchTotalTeamCount = async () => {
-      if (typeof window.ethereum !== 'undefined') {
-        try {
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
-          const result = await contract.totalTeamCount();
-          setTotalTeamCount(result.toString());
-        } catch (error) {
-          console.error("Error fetching totalTeamCount:", error);
-          if (error instanceof Error) {
-            setTotalTeamCountError(error.message);
-          } else {
-            setTotalTeamCountError("An unknown error occurred");
-          }
-        }
-      }
-    };
-
-    if (isClient) {
-      fetchTotalTeamCount();
-    }
-  }, [isClient]);
-
-  useEffect(() => {
-    const fetchTotalPlayerCount = async () => {
-      if (typeof window.ethereum !== 'undefined') {
-        try {
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
-          const result = await contract.totalPlayerCount();
-          setTotalPlayerCount(result.toString());
-        } catch (error) {
-          console.error("Error fetching totalPlayerCount:", error);
-          if (error instanceof Error) {
-            setTotalPlayerCountError(error.message);
-          } else {
-            setTotalPlayerCountError("An unknown error occurred");
-          }
-        }
-      }
-    };
-
-    if (isClient) {
-      fetchTotalPlayerCount();
-    }
-  }, [isClient]);
-
-  useEffect(() => {
-    const fetchETHBalance = async () => {
-      if (typeof window.ethereum !== 'undefined' && address) {
-        try {
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          const contract = new ethers.Contract(ETH_ADDRESS, ETH_ABI, provider);
-          const balance = await provider.getBalance(address);
-          let newBal = Number(ethers.utils.formatEther(balance));
-          setCurrentETHBalance(newBal.toFixed(7));
-          setCurrentETHBalanceError(null);
-        } catch (error) {
-          console.error("Error fetching ETH Balance:", error);
-          if (error instanceof Error) {
-            setCurrentETHBalanceError(error.message);
-          } else {
-            setCurrentETHBalanceError("An unknown error occurred");
-          }
-        }
-      }
-    };
-
-    if (isClient && isConnected && address) {
-      fetchETHBalance();
-    }
-  }, [isClient, isConnected, address]);
-
-  useEffect(() => {
-    const fetchTokenBalance = async () => {
-      if (typeof window.ethereum !== 'undefined' && address) {
-        try {
-          console.log("Fetching token balance for address:", address);
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          const contract = new ethers.Contract(TOKEN_ADDRESS, TOKEN_ABI, provider);
-          const result = await contract.balanceOf(address);
-          console.log("Token balance result:", result.toString());
-          setCurrentTokenBalance(ethers.utils.formatEther(result));
-        } catch (error) {
-          console.error("Error fetching Token Balance:", error);
-          if (error instanceof Error) {
-            setCurrentTokenBalanceError(error.message);
-          } else {
-            setCurrentTokenBalanceError("An unknown error occurred");
-          }
-        }
-      }
-    };
-
-    if (isClient && isConnected && address) {
-      fetchTokenBalance();
-    }
-  }, [isClient, isConnected, address, TOKEN_ADDRESS, TOKEN_ABI]);
-
-  //#endregion
   // Render placeholder content during SSR
   if (!isClient) {
     return <div>Loading...</div>; // Or any loading indicator you prefer
@@ -569,7 +405,7 @@ export default function AppPage() {
                   inputValue={playerName}
                   onInputChange={(e) => setPlayerName(e.target.value)}
                   buttonText={isCreatingPlayer || isCreatingPlayerTransaction ? "Creating..." : "Create Player"}
-                  onButtonClick={handleCreatePlayer}
+                  onButtonClick={handleCreatePlayerWrapper}
                   isLoading={isCreatingPlayer || isCreatingPlayerTransaction}
                   isDisabled={!isConnected || isCreatingPlayer || isCreatingPlayerTransaction || playerData != null}
                   maxChars={MAX_CHARS}
@@ -585,7 +421,7 @@ export default function AppPage() {
                   inputValue={teamName}
                   onInputChange={(e) => setTeamName(e.target.value)}
                   buttonText={isCreatingTeam || Object.values(pendingTransactions).some(Boolean) ? "Creating..." : "Create Team"}
-                  onButtonClick={handleCreateTeam}
+                  onButtonClick={handleCreateTeamWrapper}
                   isLoading={isCreatingTeam || Object.values(pendingTransactions).some(Boolean)}
                   isDisabled={!isConnected || isCreatingTeam || Object.values(pendingTransactions).some(Boolean)}
                   animationDelay="animation-delay-200"
@@ -602,7 +438,7 @@ export default function AppPage() {
                   inputValue={teamIdToJoin}
                   onInputChange={(e) => setTeamIdToJoin(e.target.value)}
                   buttonText={isJoiningTeam || Object.values(pendingTransactions).some(Boolean) ? "Joining..." : "Join Team"}
-                  onButtonClick={handleJoinTeam}
+                  onButtonClick={handleJoinTeamWrapper}
                   isLoading={isJoiningTeam || Object.values(pendingTransactions).some(Boolean)}
                   isDisabled={!isConnected || isJoiningTeam || Object.values(pendingTransactions).some(Boolean)}
                   animationDelay="animation-delay-400"
