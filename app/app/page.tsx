@@ -7,7 +7,7 @@ declare global {
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useConnect, useDisconnect, useContractWrite, usePrepareContractWrite, useContractRead } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useContractWrite, usePrepareContractWrite, useContractRead, useNetwork, useSwitchNetwork } from 'wagmi';
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +30,7 @@ import playerIcon from '/public/images/teamgame-player.png';
 import teamIcon from '/public/images/teamgame-team.png';
 import RobotsBattle from '/public/images/2robots-battle.jpg';
 import DogTag from '@/components/my-ui/DogTag';
-
+import { BASE_CHAIN_ID } from '@/app/utils/helpers';
 
 // Replace this with your actual deployed contract address
 const MAX_CHARS = 30;
@@ -112,6 +112,29 @@ export default function AppPage() {
   const [lastTransactionHash, setLastTransactionHash] = useState<string | null>(null);
   const [scrollY, setScrollY] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
+  const { chain } = useNetwork();
+  const { switchNetwork } = useSwitchNetwork();
+  const [isCorrectChain, setIsCorrectChain] = useState(true);
+
+  useEffect(() => {
+    if (isConnected && chain) {
+      setIsCorrectChain(chain.id === BASE_CHAIN_ID);
+    }
+  }, [isConnected, chain]);
+
+  const handleConnect = useCallback(() => {
+    connect();
+  }, [connect]);
+
+  const handleDisconnect = useCallback(() => {
+    disconnect();
+  }, [disconnect]);
+
+  const handleSwitchNetwork = useCallback(() => {
+    if (switchNetwork) {
+      switchNetwork(BASE_CHAIN_ID);
+    }
+  }, [switchNetwork]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -486,22 +509,28 @@ export default function AppPage() {
           <div className="flex justify-between items-center mb-8">
             <div>
               <h1 className="text-4xl font-bold text-white">Welcome to MEGA WAR</h1>
-              {!isLoading && isConnected && currentPlayerName && currentETHBalance && currentTokenBalance && !isError ? 
-              (<DogTag 
-                playerName={currentPlayerName} 
-                ethBalance={currentETHBalance} 
-                tokenBalance={currentTokenBalance} 
-              />): (
+              {!isLoading && isConnected && isCorrectChain && currentPlayerName && currentETHBalance && currentTokenBalance && !isError ? (
                 <DogTag 
-                playerName='Unknown' 
-                ethBalance='0.0' 
-                tokenBalance='0.0' 
-              />)}                                        
+                  playerName={currentPlayerName} 
+                  ethBalance={currentETHBalance} 
+                  tokenBalance={currentTokenBalance} 
+                />
+              ) : (
+                <DogTag 
+                  playerName='Unknown' 
+                  ethBalance='0.0' 
+                  tokenBalance='0.0' 
+                />
+              )}
             </div>
             {isConnected ? (
-              <Button onClick={() => disconnect()} variant="outline">Disconnect Wallet</Button>
+              isCorrectChain ? (
+                <Button onClick={handleDisconnect} variant="outline">Disconnect Wallet</Button>
+              ) : (
+                <Button onClick={handleSwitchNetwork} variant="outline">Switch to Base Chain</Button>
+              )
             ) : (
-              <Button onClick={() => connect()} variant="outline">Connect Wallet</Button>
+              <Button onClick={handleConnect} variant="outline">Connect Wallet</Button>
             )}
           </div>
           <p className="text-xl text-gray-200 mb-12">Create your player, form a team, and battle for glory!</p>
@@ -526,70 +555,77 @@ export default function AppPage() {
                   : (currentPoolId !== null ? currentPoolId.toString() : 'Loading...')}
               />
           </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Left side: Action Cards */}
-            <div className="space-y-6">
-              <InputCard
-                cardNumber="1"
-                title="Create a Player"
-                imageSrc={playerIcon.src}
-                imageAlt="Create Player"
-                inputPlaceholder={ playerData != null ? `Player already registered!` : `Enter player name (Max ${MAX_CHARS})`}
-                inputValue={playerName}
-                onInputChange={(e) => setPlayerName(e.target.value)}
-                buttonText={isCreatingPlayer || isCreatingPlayerTransaction ? "Creating..." : "Create Player"}
-                onButtonClick={handleCreatePlayer}
-                isLoading={isCreatingPlayer || isCreatingPlayerTransaction}
-                isDisabled={!isConnected || isCreatingPlayer || isCreatingPlayerTransaction || playerData != null}
-                maxChars={MAX_CHARS}
-                minChars={MIN_CHARS}
-              />
+          {/* Action Cards */}
+          {isConnected && isCorrectChain ? (
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Left side: Action Cards */}
+              <div className="space-y-6">
+                <InputCard
+                  cardNumber="1"
+                  title="Create a Player"
+                  imageSrc={playerIcon.src}
+                  imageAlt="Create Player"
+                  inputPlaceholder={ playerData != null ? `Player already registered!` : `Enter player name (Max ${MAX_CHARS})`}
+                  inputValue={playerName}
+                  onInputChange={(e) => setPlayerName(e.target.value)}
+                  buttonText={isCreatingPlayer || isCreatingPlayerTransaction ? "Creating..." : "Create Player"}
+                  onButtonClick={handleCreatePlayer}
+                  isLoading={isCreatingPlayer || isCreatingPlayerTransaction}
+                  isDisabled={!isConnected || isCreatingPlayer || isCreatingPlayerTransaction || playerData != null}
+                  maxChars={MAX_CHARS}
+                  minChars={MIN_CHARS}
+                />
 
-              <InputCard
-                cardNumber="2"
-                title="Create a Team"
-                imageSrc={teamIcon.src}
-                imageAlt="Form Team"
-                inputPlaceholder={`Enter team name (Max ${MAX_CHARS})`}
-                inputValue={teamName}
-                onInputChange={(e) => setTeamName(e.target.value)}
-                buttonText={isCreatingTeam || Object.values(pendingTransactions).some(Boolean) ? "Creating..." : "Create Team"}
-                onButtonClick={handleCreateTeam}
-                isLoading={isCreatingTeam || Object.values(pendingTransactions).some(Boolean)}
-                isDisabled={!isConnected || isCreatingTeam || Object.values(pendingTransactions).some(Boolean)}
-                animationDelay="animation-delay-200"
-                maxChars={MAX_CHARS}
-                minChars={MIN_CHARS}
-              />
+                <InputCard
+                  cardNumber="2"
+                  title="Create a Team"
+                  imageSrc={teamIcon.src}
+                  imageAlt="Form Team"
+                  inputPlaceholder={`Enter team name (Max ${MAX_CHARS})`}
+                  inputValue={teamName}
+                  onInputChange={(e) => setTeamName(e.target.value)}
+                  buttonText={isCreatingTeam || Object.values(pendingTransactions).some(Boolean) ? "Creating..." : "Create Team"}
+                  onButtonClick={handleCreateTeam}
+                  isLoading={isCreatingTeam || Object.values(pendingTransactions).some(Boolean)}
+                  isDisabled={!isConnected || isCreatingTeam || Object.values(pendingTransactions).some(Boolean)}
+                  animationDelay="animation-delay-200"
+                  maxChars={MAX_CHARS}
+                  minChars={MIN_CHARS}
+                />
 
-              <InputCard
-                cardNumber="3"
-                title="Join a Team"
-                imageSrc={RobotsBattle.src}
-                imageAlt="Compete"
-                inputPlaceholder="Enter team ID to join"
-                inputValue={teamIdToJoin}
-                onInputChange={(e) => setTeamIdToJoin(e.target.value)}
-                buttonText={isJoiningTeam || Object.values(pendingTransactions).some(Boolean) ? "Joining..." : "Join Team"}
-                onButtonClick={handleJoinTeam}
-                isLoading={isJoiningTeam || Object.values(pendingTransactions).some(Boolean)}
-                isDisabled={!isConnected || isJoiningTeam || Object.values(pendingTransactions).some(Boolean)}
-                animationDelay="animation-delay-400"
-                maxChars={MAX_CHARS}
-                minChars={MIN_CHARS}                
-              />
+                <InputCard
+                  cardNumber="3"
+                  title="Join a Team"
+                  imageSrc={RobotsBattle.src}
+                  imageAlt="Compete"
+                  inputPlaceholder="Enter team ID to join"
+                  inputValue={teamIdToJoin}
+                  onInputChange={(e) => setTeamIdToJoin(e.target.value)}
+                  buttonText={isJoiningTeam || Object.values(pendingTransactions).some(Boolean) ? "Joining..." : "Join Team"}
+                  onButtonClick={handleJoinTeam}
+                  isLoading={isJoiningTeam || Object.values(pendingTransactions).some(Boolean)}
+                  isDisabled={!isConnected || isJoiningTeam || Object.values(pendingTransactions).some(Boolean)}
+                  animationDelay="animation-delay-400"
+                  maxChars={MAX_CHARS}
+                  minChars={MIN_CHARS}                
+                />
+              </div>
+
+              {/* Right side: Team List */}
+              <Card className="bg-white/10 backdrop-blur-lg text-white overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105 animate-slide-up animation-delay-600">
+                <CardHeader>
+                  <CardTitle>Existing Teams</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TeamList />
+                </CardContent>
+              </Card>
             </div>
-
-            {/* Right side: Team List */}
-            <Card className="bg-white/10 backdrop-blur-lg text-white overflow-hidden transform transition-all duration-500 ease-in-out hover:scale-105 animate-slide-up animation-delay-600">
-              <CardHeader>
-                <CardTitle>Existing Teams</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TeamList />
-              </CardContent>
-            </Card>
-          </div>
+          ) : (
+            <p className="text-xl text-center text-red-400">
+              {isConnected ? "Please switch to the Base chain to interact with the game." : "Please connect your wallet to interact with the game."}
+            </p>
+          )}
         </div>
       </div>
 

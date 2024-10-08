@@ -5,6 +5,11 @@ import { ethers } from 'ethers';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/app/Contract';
 import { Team } from './types';
 
+export const BASE_CHAIN_ID = 84532; // Base chain ID
+export const BASE_CHAIN_NAME = 'Base';
+export const BASE_RPC_URL = 'https://base-sepolia.blockpi.network/v1/rpc/public'; // Replace with the correct RPC URL
+
+
 export function usePlayerData() {
     const { address, isConnected } = useAccount();
     const [playerData, setPlayerData] = useState(null);
@@ -81,3 +86,29 @@ export function usePlayerData() {
     return { teams, isLoading, error, refetchTeams: fetchTeams };
   }
   
+  export async function checkAndSwitchChain(provider: ethers.providers.Web3Provider) {
+    const network = await provider.getNetwork();
+    if (network.chainId !== BASE_CHAIN_ID) {
+      try {
+        await provider.send('wallet_switchEthereumChain', [{ chainId: ethers.utils.hexValue(BASE_CHAIN_ID) }]);
+      } catch (switchError: any) {
+        // This error code indicates that the chain has not been added to MetaMask.
+        if (switchError.code === 4902) {
+          try {
+            await provider.send('wallet_addEthereumChain', [
+              {
+                chainId: ethers.utils.hexValue(BASE_CHAIN_ID),
+                chainName: BASE_CHAIN_NAME,
+                rpcUrls: [BASE_RPC_URL],
+              },
+            ]);
+          } catch (addError) {
+            console.error('Failed to add the Base network:', addError);
+          }
+        } else {
+          console.error('Failed to switch to the Base network:', switchError);
+        }
+      }
+    }
+    return network.chainId === BASE_CHAIN_ID;
+  }
