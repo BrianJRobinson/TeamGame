@@ -3,7 +3,7 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
+  CardTitle
 } from "@/components/ui/card"
 
 interface InfoCardProps {
@@ -18,7 +18,7 @@ const InfoCard = ({ title, content }: InfoCardProps) => {
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <p>{content}</p>
+        <p className="text-center">{content}</p>
       </CardContent>
     </Card>
   );

@@ -6,8 +6,9 @@ declare global {
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useConnect, useDisconnect, useContractWrite, usePrepareContractWrite, useContractRead, useNetwork, useSwitchNetwork } from 'wagmi';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAccount, useConnect, useDisconnect, useContractWrite, usePrepareContractWrite, useContractRead, useNetwork, useSwitchNetwork, useChainId } from 'wagmi';
+import { watchNetwork, getNetwork } from '@wagmi/core'
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,7 +46,7 @@ import {
 } from '@/app/utils/chainfunctions';
 
 // Replace this with your actual deployed contract address
-const MAX_CHARS = 30;
+const MAX_CHARS = 20;
 const MIN_CHARS = 3;
 
 export function usePlayerData() {
@@ -124,15 +125,42 @@ export default function AppPage() {
   const [lastTransactionHash, setLastTransactionHash] = useState<string | null>(null);
   const [scrollY, setScrollY] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
-  const { chain } = useNetwork();
+  //const { chain } = useNetwork();
   const { switchNetwork } = useSwitchNetwork();
-  const [isCorrectChain, setIsCorrectChain] = useState(true);
+  const [isCorrectChain, setIsCorrectChain] = useState<boolean | null>(true);
+  const initialCheckDone = useRef(false);
+  const { chain, chains } = getNetwork()
+  const chainId = useChainId();
+  
+  useEffect(() => {
+    console.log("Chain or isconnected changed");
+    const checkChain = async () => {
+      if (!initialCheckDone.current) {
+        console.log("Initial chain check - connected:", isConnected, "chain:", chain?.id);
+        initialCheckDone.current = true;
+      }
+
+      if (isConnected && chain) {
+        const correct = chain.id === BASE_CHAIN_ID;
+        console.log("Chain check - Is correct chain:", correct);
+        setIsCorrectChain(correct);
+        if (!correct) {
+          console.log("Wrong network detected, attempting to switch");
+          handleSwitchNetwork();
+        }
+      } else {
+        console.log("Not connected or chain undefined");
+        setIsCorrectChain(null);
+      }
+    };
+
+    checkChain();
+  }, [chain, isConnected]);
 
   useEffect(() => {
-    if (isConnected && chain) {
-      setIsCorrectChain(chain.id === BASE_CHAIN_ID);
-    }
-  }, [isConnected, chain]);
+    console.log("Chain or isconnected changed");
+    console.log("Chain ID:", chainId);
+  }, [chainId]);
 
   const handleConnect = useCallback(() => {
     connect();
@@ -143,26 +171,14 @@ export default function AppPage() {
   }, [disconnect]);
 
   const handleSwitchNetwork = useCallback(() => {
+    console.log("handleSwitchNetwork called");
     if (switchNetwork) {
+      console.log("Attempting to switch to chain ID:", BASE_CHAIN_ID);
       switchNetwork(BASE_CHAIN_ID);
+    } else {
+      console.log("switchNetwork function is not available");
     }
-  }, [switchNetwork]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-
-    // Set isLoaded to true after a short delay
-    const timer = setTimeout(() => setIsLoaded(true), 100);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      clearTimeout(timer);
-    };
-  }, []);
+  }, [switchNetwork, address]);
 
   const getTranslateX = (isLeft: boolean) => {
     if (!isLoaded) return isLeft ? '-100%' : '100%';
@@ -234,38 +250,31 @@ export default function AppPage() {
   }, [joinTeam, handleJoinTeam]);
 
   useEffect(() => {
-    if (isClient && isCorrectChain) {
-      fetchCurrentPoolId(setCurrentPoolId, setCurrentPoolIdError, isCorrectChain);
-    }
-  }, [isClient]);
+      console.log("gett Pool Id");
+      fetchCurrentPoolId(setCurrentPoolId, setCurrentPoolIdError, BASE_CHAIN_ID);
+  }, [isClient, isConnected]);
 
   useEffect(() => {
-    if (isClient && isCorrectChain) {
-      fetchTeamCost(setTeamCost, setTeamCostError, isCorrectChain);
-    }
-  }, [isClient]);
+      fetchTeamCost(setTeamCost, setTeamCostError, BASE_CHAIN_ID);
+  }, [isClient, isConnected]);
 
   useEffect(() => {
-    if (isClient && isCorrectChain) {
-      fetchTotalTeamCount(setTotalTeamCount, setTotalTeamCountError, isCorrectChain);
-    }
-  }, [isClient]);
+      fetchTotalTeamCount(setTotalTeamCount, setTotalTeamCountError, BASE_CHAIN_ID);
+  }, [isClient, isConnected]);
 
   useEffect(() => {
-    if (isClient && isCorrectChain) {
-      fetchTotalPlayerCount(setTotalPlayerCount, setTotalPlayerCountError, isCorrectChain);
-    }
-  }, [isClient]);
+      fetchTotalPlayerCount(setTotalPlayerCount, setTotalPlayerCountError, BASE_CHAIN_ID);
+  }, [isClient, isConnected]);
 
   useEffect(() => {
     if (isClient && isConnected && address) {
-      fetchETHBalance(address, setCurrentETHBalance, setCurrentETHBalanceError, isCorrectChain);
+      fetchETHBalance(address, setCurrentETHBalance, setCurrentETHBalanceError, BASE_CHAIN_ID);
     }
   }, [isClient, isConnected, address, isCorrectChain]);
 
   useEffect(() => {
     if (isClient && isConnected && address) {
-      fetchTokenBalance(address, setCurrentTokenBalance, setCurrentTokenBalanceError, isCorrectChain);
+      fetchTokenBalance(address, setCurrentTokenBalance, setCurrentTokenBalanceError, BASE_CHAIN_ID);
     }
   }, [isClient, isConnected, address]);
 
@@ -307,7 +316,7 @@ export default function AppPage() {
 
   return (
     <div className="min-h-screen bg-cover bg-center bg-no-repeat relative overflow-hidden flex flex-col pt-[20vh]"
-         style={{backgroundImage: `url(${battleSceneImage.src})`, margin: `-70px`}}>
+         style={{backgroundImage: `url(${battleSceneImage.src})`}}>
       <div className="absolute inset-0 bg-gradient-to-b from-blue-900/70 to-purple-900/70"></div>
       
       {/* Character Images */}
@@ -319,9 +328,7 @@ export default function AppPage() {
           <Image 
             src={leftCharacter} 
             alt="Left Character" 
-            width={200} 
-            height={300} 
-            className="mb-[-50px] transition-all duration-1000 ease-in-out hover:scale-105"
+            className="transition-all duration-1000 ease-in-out hover:scale-105 w-1/3 h-1/3 md:w-1/2 md:h-1/2"
           />
         </div>
         
@@ -332,46 +339,51 @@ export default function AppPage() {
           <Image 
             src={rightCharacter} 
             alt="Right Character" 
-            width={200} 
-            height={300} 
-            className="mb-[-50px] transition-all duration-1000 ease-in-out hover:scale-105"
+            className="transition-all duration-1000 ease-in-out hover:scale-105 w-1/3 h-1/3  md:w-1/2 md:h-1/2 ml-auto"
           />
         </div>
       </div>
 
       {/* Hero Container */}
-      <div className="relative z-20 bg-gray-900/80 mt-[-50px] py-12 px-4 sm:px-6 lg:px-8 rounded-t-3xl mx-auto max-w-8xl w-full lg:w-4/5 xl:w-3/4">
-        <div className="max-w-screen-2xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-4xl font-bold text-white">Welcome to MEGA WAR</h1>
-              {!isLoading && isConnected && isCorrectChain && currentPlayerName && currentETHBalance && currentTokenBalance && !isError ? (
-                <DogTag 
-                  playerName={currentPlayerName} 
-                  ethBalance={currentETHBalance} 
-                  tokenBalance={currentTokenBalance} 
-                />
-              ) : (
-                <DogTag 
-                  playerName='Unknown' 
-                  ethBalance='0.0' 
-                  tokenBalance='0.0' 
-                />
-              )}
+      <div className="relative z-20 bg-gray-900/80 mt-[-50px] py-12 px-4 sm:px-6 lg:px-8 rounded-t-3xl mx-auto md:max-w-8xl w-full lg:w-4/5 xl:w-3/4">
+        <div className="md:max-w-screen-2xl mx-auto">
+          <div className="flex flex-col items-center w-full mx-auto">
+            <h1 className="text-2xl md:text-4xl font-bold mb-4 mt-4">Welcome to MEGA WAR</h1>
+            
+            <div className="w-full mb-4">
+              <div className="absolute top-0 right-0 mt-4 mr-4">
+                {isConnected ? (
+                  isCorrectChain ? (
+                    <Button onClick={handleDisconnect} variant="default" className="bg-gray-400 hover:bg-gray-700">Disconnect Wallet</Button>
+                  ) : (
+                    <Button onClick={handleSwitchNetwork} variant="default" className="bg-gray-400 hover:bg-gray-700">Switch to Base Chain</Button>
+                  )
+                ) : (
+                  <Button onClick={handleConnect} variant="default" className="bg-gray-400 hover:bg-gray-700">Connect Wallet</Button>
+                )}
+              </div>
+              <div className="flex flex-col items-center min-h-[200px] max-h-[300px]">
+                {!isLoading && isConnected && isCorrectChain && currentPlayerName && currentETHBalance && currentTokenBalance && !isError ? (
+                  <DogTag 
+                    playerName={currentPlayerName} 
+                    ethBalance={currentETHBalance} 
+                    tokenBalance={currentTokenBalance} 
+                  />
+                ) : (
+                  <DogTag 
+                    playerName='UNKNOWN'
+                    ethBalance='0.0' 
+                    tokenBalance='0.0' 
+                  />
+                )}
+              </div>
             </div>
-            {isConnected ? (
-              isCorrectChain ? (
-                <Button onClick={handleDisconnect} variant="outline">Disconnect Wallet</Button>
-              ) : (
-                <Button onClick={handleSwitchNetwork} variant="outline">Switch to Base Chain</Button>
-              )
-            ) : (
-              <Button onClick={handleConnect} variant="outline">Connect Wallet</Button>
-            )}
-          </div>
-          <p className="text-xl text-gray-200 mb-12">Create your player, form a team, and battle for glory!</p>
-           {/* Info Cards */}
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <p className="md:text-xl mb-8 text-center">Create your player, form a team, and battle for glory!</p>
+            </div>
+            {/* Game stats grid */}
+            {/* Info Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <InfoCard
                 title="Team Cost"
                 content={teamCostError ? `Error: ${teamCostError}` : (teamCost ? `${teamCost} WETH` : 'Loading...')}
@@ -456,15 +468,15 @@ export default function AppPage() {
                   <TeamList />
                 </CardContent>
               </Card>
-            </div>
+          </div>
           ) : (
             <p className="text-xl text-center text-red-400">
               {isConnected ? "Please switch to the Base chain to interact with the game." : "Please connect your wallet to interact with the game."}
             </p>
-          )}
+          )}          
         </div>
       </div>
-
+    </div>
       {/* Footer */}
       <footer className="relative z-10 bg-gray-900/80 text-white py-8 mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

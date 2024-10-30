@@ -37,16 +37,17 @@ const AnimatedNumber: React.FC<{ endValue: number, decimalPlaces: number }> = ({
 
 const DogTag: React.FC<DogTagProps> = ({ playerName, ethBalance, tokenBalance }) => {
   return (
-    <div className={styles.dogTagContainer}>
-      <div className={styles.dogTag}>
-        <div className={styles.hole}></div>
-        <div className={styles.content}>
-          <h2 className={styles.playerName}>{playerName}</h2>
-          <p className={styles.balance}>ETH: {ethBalance && <AnimatedNumber endValue={parseFloat(ethBalance)} decimalPlaces={5} />}</p>
-          <p className={styles.balance}>Tokens: {tokenBalance && <AnimatedNumber endValue={parseFloat(tokenBalance)} decimalPlaces={3} />}</p>
-        </div>
+    <div className="w-full h-auto aspect-[3/1] relative">
+      <div className="absolute inset-0 bg-[url('/images/dogtag.png')] bg-contain bg-no-repeat bg-center min-h-[200px] max-h-[300px]"></div>
+      <div className="relative z-10 flex flex-col align-start justify-start h-full pt-2 text-gray-700 gap-5">
+        <h2 className="text-sm md:text-xl font-bold md:mb-2 mt-4 text-center md:-indent-1 lg:-indent-10 [text-shadow:_3px_2px_3px_#838383]">{playerName}</h2>
+        <p className="text-xl md:text-2xl font-bold text-center indent-2 md:-indent-6 [text-shadow:_3px_2px_3px_#838383]">
+          ETH: {ethBalance && <AnimatedNumber endValue={parseFloat(ethBalance)} decimalPlaces={4} />}
+        </p>
+        <p className="text-xl md:text-2xl font-bold text-center md:-indent-4 [text-shadow:_3px_2px_3px_#838383]">
+          Tokens: {tokenBalance && <AnimatedNumber endValue={parseFloat(tokenBalance)} decimalPlaces={3} />}
+        </p>
       </div>
-      <div className={`${styles.dogTag} ${styles.behindTag}`}></div>
     </div>
   );
 };

@@ -73,18 +73,22 @@ export const handleJoinTeam = async (joinTeam: any) => {
     }
   };
 
-export const fetchCurrentPoolId = async (setCurrentPoolId: any, setCurrentPoolIdError: any, isCorrectChain: any) => {
-  if (!isCorrectChain) {
-    setCurrentPoolIdError("Wrong Network");
-    return;
-  }
+export const fetchCurrentPoolId = async (setCurrentPoolId: any, setCurrentPoolIdError: any, expectedChainId: number) => {
   if (typeof window.ethereum !== 'undefined') {
     try {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
-      const result = await contract.currentPoolId();
-      console.log("Current Pool ID from ethers:", result);
-      setCurrentPoolId(result.toNumber());
+      const network = await provider.getNetwork();
+      if (network.chainId != expectedChainId)
+      {
+        setCurrentPoolIdError("Change Network");
+      }
+      else
+      {
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+        const result = await contract.currentPoolId();
+        console.log("Current Pool ID from ethers:", result);
+        setCurrentPoolId(result.toNumber());
+      }
     } catch (error) {
       console.error("Error fetching currentPoolId with ethers:", error);
       if (error instanceof Error) {
@@ -96,17 +100,21 @@ export const fetchCurrentPoolId = async (setCurrentPoolId: any, setCurrentPoolId
   }
 };
 
-export const fetchTeamCost = async (setTeamCost: any, setTeamCostError: any, isCorrectChain: any) => {
-  if (!isCorrectChain) {
-    setTeamCostError("Wrong Network");
-    return;
-  }
+export const fetchTeamCost = async (setTeamCost: any, setTeamCostError: any, expectedChainId: number) => {
   if (typeof window.ethereum !== 'undefined') {
     try {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
-      const result = await contract.teamCost();
-      setTeamCost(ethers.utils.formatEther(result));
+      const network = await provider.getNetwork();
+      if (network.chainId != expectedChainId)
+      {
+        setTeamCostError("Change Network");
+      }
+      else
+      {
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+        const result = await contract.teamCost();
+        setTeamCost(ethers.utils.formatEther(result));
+      }
     } catch (error) {
       console.error("Error fetching teamCost:", error);
       if (error instanceof Error) {
@@ -118,17 +126,21 @@ export const fetchTeamCost = async (setTeamCost: any, setTeamCostError: any, isC
   }
 };
 
-export const fetchTotalTeamCount = async (setTotalTeamCount: any, setTotalTeamCountError: any, isCorrectChain: any) => {
-    if (!isCorrectChain) {
-        setTotalTeamCountError("Wrong Network");
-        return;
-    }
+export const fetchTotalTeamCount = async (setTotalTeamCount: any, setTotalTeamCountError: any, expectedChainId: number) => {
     if (typeof window.ethereum !== 'undefined') {
     try {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
-      const result = await contract.totalTeamCount();
-      setTotalTeamCount(result.toString());
+      const network = await provider.getNetwork();
+      if (network.chainId != expectedChainId)
+      {
+        setTotalTeamCountError("Change Network");
+      }
+      else
+      {      
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+        const result = await contract.totalTeamCount();
+        setTotalTeamCount(result.toString());
+      }
     } catch (error) {
       console.error("Error fetching totalTeamCount:", error);
       if (error instanceof Error) {
@@ -140,17 +152,21 @@ export const fetchTotalTeamCount = async (setTotalTeamCount: any, setTotalTeamCo
   }
 };
 
-export const fetchTotalPlayerCount = async (setTotalPlayerCount: any, setTotalPlayerCountError: any, isCorrectChain: any) => {
-    if (!isCorrectChain) {
-        setTotalPlayerCountError("Wrong Network");
-        return;
-    }
+export const fetchTotalPlayerCount = async (setTotalPlayerCount: any, setTotalPlayerCountError: any, expectedChainId: number) => {
     if (typeof window.ethereum !== 'undefined') {
     try {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
-      const result = await contract.totalPlayerCount();
-      setTotalPlayerCount(result.toString());
+      const network = await provider.getNetwork();
+      if (network.chainId != expectedChainId)
+      {
+        setTotalPlayerCountError("Change Network");
+      }
+      else
+      {       
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+        const result = await contract.totalPlayerCount();
+        setTotalPlayerCount(result.toString());
+      }
     } catch (error) {
       console.error("Error fetching totalPlayerCount:", error);
       if (error instanceof Error) {
@@ -162,18 +178,22 @@ export const fetchTotalPlayerCount = async (setTotalPlayerCount: any, setTotalPl
   }
 };
 
-export const fetchETHBalance = async (address: string, setCurrentETHBalance: any, setCurrentETHBalanceError: any, isCorrectChain: any) => {
-    if (!isCorrectChain) {
-        setCurrentETHBalanceError("Wrong Network");
-        return;
-    }
+export const fetchETHBalance = async (address: string, setCurrentETHBalance: any, setCurrentETHBalanceError: any, expectedChainId: number) => {
     if (typeof window.ethereum !== 'undefined' && address) {
     try {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const balance = await provider.getBalance(address);
-      let newBal = Number(ethers.utils.formatEther(balance));
-      setCurrentETHBalance(newBal.toFixed(7));
-      setCurrentETHBalanceError(null);
+      const network = await provider.getNetwork();
+      if (network.chainId != expectedChainId)
+      {
+        setCurrentETHBalanceError("Change Network");
+      }
+      else
+      {       
+        const balance = await provider.getBalance(address);
+        let newBal = Number(ethers.utils.formatEther(balance));
+        setCurrentETHBalance(newBal.toFixed(7));
+        setCurrentETHBalanceError(null);
+      }
     } catch (error) {
       console.error("Error fetching ETH Balance:", error);
       if (error instanceof Error) {
@@ -185,19 +205,23 @@ export const fetchETHBalance = async (address: string, setCurrentETHBalance: any
   }
 };
 
-export const fetchTokenBalance = async (address: string, setCurrentTokenBalance: any, setCurrentTokenBalanceError: any, isCorrectChain: any) => {
-    if (!isCorrectChain) {
-        setCurrentTokenBalanceError("Wrong Network");
-        return;
-    }
+export const fetchTokenBalance = async (address: string, setCurrentTokenBalance: any, setCurrentTokenBalanceError: any, expectedChainId: number) => {
     if (typeof window.ethereum !== 'undefined' && address) {
     try {
       console.log("Fetching token balance for address:", address);
       const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const contract = new ethers.Contract(TOKEN_ADDRESS, TOKEN_ABI, provider);
-      const result = await contract.balanceOf(address);
-      console.log("Token balance result:", result.toString());
-      setCurrentTokenBalance(ethers.utils.formatEther(result));
+      const network = await provider.getNetwork();
+      if (network.chainId != expectedChainId)
+      {
+        setCurrentTokenBalanceError("Change Network");
+      }
+      else
+      {       
+        const contract = new ethers.Contract(TOKEN_ADDRESS, TOKEN_ABI, provider);
+        const result = await contract.balanceOf(address);
+        console.log("Token balance result:", result.toString());
+        setCurrentTokenBalance(ethers.utils.formatEther(result));
+      }
     } catch (error) {
       console.error("Error fetching Token Balance:", error);
       if (error instanceof Error) {
