@@ -44,7 +44,8 @@
     "@types/node": "20.6.2",
     "@types/react": "18.2.22",
     "@types/react-dom": "18.2.7",
-    "@wagmi/core": "^1.4.13",
+    "@wagmi/connectors": "^5.9.0",
+    "@wagmi/core": "^2.16.0",
     "autoprefixer": "10.4.15",
     "bufferutil": "^4.0.8",
     "class-variance-authority": "^0.7.0",
@@ -74,8 +75,8 @@
     "typescript": "5.2.2",
     "utf-8-validate": "^5.0.10",
     "vaul": "^0.9.9",
-    "viem": "^2.21.21",
-    "wagmi": "^1.4.13",
+    "viem": "^2.33.2",
+    "wagmi": "^2.16.0",
     "zod": "^3.23.8"
   }
 }

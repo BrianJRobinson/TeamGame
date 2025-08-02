@@ -1,36 +1,24 @@
-"use client";
+// app/providers.tsx
+'use client'
 
-import { WagmiConfig, createConfig, configureChains } from 'wagmi';
-import { publicProvider } from 'wagmi/providers/public';
-import { InjectedConnector } from 'wagmi/connectors/injected';
+import React from 'react'
+import { WagmiProvider, createConfig, http } from 'wagmi'
+import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
+import { base, baseSepolia } from 'wagmi/chains'
 
-// Or define a custom chain if needed:
-const baseChain = {
-   id: 84532,
-   name: 'BaseSepolia',
-   network: 'base',
-   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-   rpcUrls: {
-     default: { http: ['https://sepolia.base.org'] },
-     public: { http: ['https://sepolia.base.org'] },
-   },
-   blockExplorers: {
-     default: { name: 'Basescan', url: 'https://sepolia.basescan.org/' },
-   },
-}
-
-const { chains, publicClient, webSocketPublicClient } = configureChains(
-  [baseChain], // Add or remove chains as needed
-  [publicProvider()]
-);
+const queryClient = new QueryClient()
 
 const config = createConfig({
-  autoConnect: true,
-  connectors: [new InjectedConnector({ chains })],
-  publicClient,
-  webSocketPublicClient,
-});
+  chains: [baseSepolia],
+  transports: {
+    [baseSepolia.id]: http(), // Defaults to public RPC — you can swap in a custom endpoint if needed
+  },
+})
 
-export function WagmiProvider({ children }: { children: React.ReactNode }) {
-  return <WagmiConfig config={config}>{children}</WagmiConfig>;
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <WagmiProvider config={config}>{children}</WagmiProvider>
+    </QueryClientProvider>
+  )
 }

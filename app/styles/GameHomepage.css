@@ -1,0 +1,19 @@
+.metallic-text {
+    background: linear-gradient(
+      90deg,
+      #f7d85f 0%,
+      #dd6f2e 20%,
+      #bd8e48 40%,
+      #d9cf3f 60%,
+      #bd8c33 80%,
+      #e3ab27 100%
+    );
+    background-size: 200% auto;
+    color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+    text-shadow:
+      1px 1px 2px #b97f29,
+      0 0 4px #f9c921,
+      0 1px 0 #ebcb55;
+  }

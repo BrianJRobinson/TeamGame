@@ -1,22 +1,22 @@
+import React from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { Button } from '../components/ui/button';
 import Image from 'next/image';
 import { X, Facebook, Instagram, Github } from 'lucide-react';
-import { motion, useScroll, useTransform } from "framer-motion";
 
 // Import images
 
-import playerIcon from '/public/images/teamgame-player.png';
-import teamIcon from '/public/images/teamgame-team.png';
-import RobotsBattle from '/public/images/2robots-battle.jpg';
-import battleImage from '/public/images/BattleArena.jpg';
+const playerIcon = 'images/teamgame-player.png';
+const teamIcon = 'images/teamgame-team.png';
+const RobotsBattle = 'images/2robots-battle.jpg';
+const battleImage = '/images/BattleArena.jpg';
 
 export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
       <div className="bg-cover bg-center h-screen flex items-center justify-center relative"
-           style={{backgroundImage: `url(${battleImage.src})`, marginTop:-100}}>
+           style={{backgroundImage: `url(${battleImage})`, marginTop:-100}}>
         <div className="absolute inset-0 bg-black opacity-50"></div>
         <div className="z-10 text-center text-white">
           <h1 className="text-5xl font-bold mb-6">Welcome to the Mega War Blockchain Game</h1>

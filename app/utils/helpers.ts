@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 
 import { ethers } from 'ethers';
-import { CONTRACT_ADDRESS, CONTRACT_ABI } from '@/app/Contract';
+import { CONTRACT_ADDRESS, CONTRACT_ABI } from '../../app/Contract';
 import { Team } from './types';
 
 export const BASE_CHAIN_ID = 84532; // Base chain ID
-export const BASE_CHAIN_NAME = 'Base';
+export const BASE_CHAIN_NAME = 'Base-Sepolia';
 export const BASE_RPC_URL = 'https://base-sepolia.blockpi.network/v1/rpc/public'; // Replace with the correct RPC URL
 
 
