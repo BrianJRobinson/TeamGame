@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build:css": "tailwindcss -i ./app/globals.css -o ./dist/output.css --watch"
+    "build:css": "tailwindcss -i ./app/globals.css -o ./dist/output.css --watch",
+    "pages:build": "npx @cloudflare/next-on-pages"
+
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
@@ -78,5 +80,8 @@
     "viem": "^2.33.2",
     "wagmi": "^2.16.0",
     "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@cloudflare/next-on-pages": "^1.13.13"
   }
 }
